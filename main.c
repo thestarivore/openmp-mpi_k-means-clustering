@@ -1,4 +1,7 @@
+#include <stdlib.h>
 #include <stdio.h>
+
+
 
 int main() {
     FILE *myFile;
@@ -12,5 +15,7 @@ int main() {
         printf("Number is: %f, %f\n\n", x, y);
     }
 
-    return 0;
+    
 }
+
+
