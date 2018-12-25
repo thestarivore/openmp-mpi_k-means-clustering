@@ -1,0 +1,3 @@
+[console_scripts]
+cvss_calculator = cvss.cvss_calculator:main
+
