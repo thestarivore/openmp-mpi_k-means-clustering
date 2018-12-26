@@ -1,0 +1,13 @@
+# depslib dependency file v1.0
+1545775834 source:/home/starivore/Workspace/MiddlewareTechDistSyss/projects/openmp_k-meansclustering/openmp_cpp_project/openmp_cpp_project/main.cpp
+	<iostream>
+	<stdlib.h>
+	<stdio.h>
+
+1545858576 source:/home/starivore/Workspace/MiddlewareTechDistSyss/projects/openmp_k-meansclustering/openmp_cpp_project/main.cpp
+	<iostream>
+	<stdlib.h>
+	<stdio.h>
+	<list>
+	<math.h>
+
