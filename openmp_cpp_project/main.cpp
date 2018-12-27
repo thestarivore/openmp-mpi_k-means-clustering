@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <list>
 #include <math.h>
+#include <time.h>
 
 using namespace std;
 
@@ -15,7 +16,7 @@ typedef struct{
 }Point;
 
 //Defines
-#define PRELOOP_PRINT_AND_PLOT              //Decomment to enable PrintToFile & ClustersPlot before entering the algorithm's loop
+//#define PRELOOP_PRINT_AND_PLOT              //Decomment to enable PrintToFile & ClustersPlot before entering the algorithm's loop
 //#define LOOP_PRINT_AND_PLOT                 //Decomment to enable PrintToFile & ClustersPlot inside the algorithm's loop
 #define POSTLOOP_PRINT_AND_PLOT             //Decomment to enable PrintToFile & ClustersPlot after the algorithm's loop
 
@@ -29,6 +30,7 @@ void    printDataToFile(char *filename, Point * data, int ds_rows, bool newFile)
 void    printCentroidsToFile(char *filename, Point * data, int k, bool newFile);
 bool    recalcCentroids(Point * c, int k, Point * data, int ds_rows);
 void    plotClustersFromFile();
+float   calcSquaredError(Point * c, int k, Point * data, int ds_rows);
 
 
 int main() {
@@ -37,6 +39,8 @@ int main() {
     char newCentroidsFile[] = "../dataset_display/newcentroids.csv";
     int k, n_rows;
     bool centroidsHaveChanged;
+    clock_t start, end;
+    double cpu_time_used;
 
     //Get number of rows of the dataset (-1 because of the header)
     n_rows = countLines(datasetFile) - 1;
@@ -56,6 +60,9 @@ int main() {
     //Pick K
     cout << "Number of centroids (K): ";
     cin >> k;
+
+    //Start time mesurment
+    start = clock();
 
     //Allocate and choose the centroids
     Point * c = (Point*) malloc(k * sizeof(Point));
@@ -92,6 +99,17 @@ int main() {
             plotClustersFromFile();
         #endif // LOOP_PRINT_AND_PLOT
     }while(centroidsHaveChanged);
+
+    //End time mesurment - for an accurate time mesurment is strongly recommended to comment
+    //                     the PRELOOP_PRINT_AND_PLOT & LOOP_PRINT_AND_PLOT defines
+    end = clock();
+    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC ;
+    cout << "K-Means Clustering execution time: " << cpu_time_used*1000 << "ms\n";
+
+    //Objective function(J) calculus (Squared Error function) - Calculate an indicator(score) that can be used
+    //to choose K(number of centroids). Usually the Knee-rule is used to choose K in the J-K graph.
+    float J = calcSquaredError(c, k, data, n_rows);
+    cout << "K-Means Clustering squared error: " << J << "\n";
 
     #ifdef POSTLOOP_PRINT_AND_PLOT
         //Print to file the new dataset and the new centroids
@@ -243,7 +261,7 @@ void initCentroids(Point * c, int k, Point * data, int ds_rows){
 }
 
 /**
- * @brief   Calculate the distance between two points in 2D space
+ * @brief   Calculate the distance between two points in 2D space (Euclidean distance)
  * @retval  Distance between the two points
  */
 float distance2Points(Point p1, Point p2){
@@ -377,8 +395,6 @@ bool recalcCentroids(Point * c, int k, Point * data, int ds_rows){
 
     //Iterate all the centroids
     for(j=0; j<k; j++){
-        if(j == 7)
-            cout<<"";
         newCentroidX = 0;
         newCentroidY = 0;
         meanCount = 0;
@@ -407,4 +423,34 @@ bool recalcCentroids(Point * c, int k, Point * data, int ds_rows){
     }
 
     return centroidsChanged;
+}
+
+/**
+ * @brief   Objective function(J) calculus (Squared Error function) - Calculate an indicator(score) that can be used
+ *          to choose K(number of centroids). Usually the Knee-rule is used to choose K in the J-K graph.
+ * @param   c       Point struct centroids array of the x,y positions
+ * @param   k       number of centroids
+ * @param   data    Point struct data array of the x,y positions
+ * @param   ds_rows number of points in the dataset
+ * @retval  J function's float value
+ */
+float calcSquaredError(Point * c, int k, Point * data, int ds_rows){
+    int i,j, meanCount = 0;
+    float J = 0.0f, sqrDist;
+
+    //Iterate all the centroids
+    for(j=0; j<k; j++){
+        sqrDist = 0.0f;
+
+        //Iterate all the data points
+        for(i=0; i<ds_rows; i++){
+            //The datapoints that belong to this cluster
+            if(data[i].cn == j){
+                sqrDist = pow(distance2Points(data[i], c[j]), 2);
+                J += sqrDist;
+            }
+        }
+    }
+
+    return J;
 }
