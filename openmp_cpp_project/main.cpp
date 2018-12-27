@@ -6,13 +6,20 @@
 
 using namespace std;
 
+
+//Typedefs & Structs
 typedef struct{
     float x;
     float y;
     int   cn;    //Cluster number
 }Point;
 
-//cout << "Hello world!" << endl;
+//Defines
+#define PRELOOP_PRINT_AND_PLOT              //Decomment to enable PrintToFile & ClustersPlot before entering the algorithm's loop
+//#define LOOP_PRINT_AND_PLOT                 //Decomment to enable PrintToFile & ClustersPlot inside the algorithm's loop
+#define POSTLOOP_PRINT_AND_PLOT             //Decomment to enable PrintToFile & ClustersPlot after the algorithm's loop
+
+//Function Prototypes
 int     countLines(char *filename);
 void    readDataset(char *filename, Point * data);
 void    initCentroids(Point * c, int k, Point * data, int ds_rows);
@@ -21,6 +28,7 @@ bool    recalcClusters(Point * c, int k, Point * data, int ds_rows);
 void    printDataToFile(char *filename, Point * data, int ds_rows, bool newFile);
 void    printCentroidsToFile(char *filename, Point * data, int k, bool newFile);
 bool    recalcCentroids(Point * c, int k, Point * data, int ds_rows);
+void    plotClustersFromFile();
 
 
 int main() {
@@ -57,12 +65,14 @@ int main() {
     //Recalculate Clusters
     recalcClusters(c, k, data, n_rows);
 
-    //Print to file the new dataset and the new centroids
-    printDataToFile(newDatasetFile, data, n_rows, true);
-    printCentroidsToFile(newCentroidsFile, c, k, true);
+    #ifdef PRELOOP_PRINT_AND_PLOT
+        //Print to file the new dataset and the new centroids
+        printDataToFile(newDatasetFile, data, n_rows, true);
+        printCentroidsToFile(newCentroidsFile, c, k, true);
 
-    //Plot the new dataset & centroids
-    system("python3 ../dataset_display/main.py plot_clusters");
+        //Plot the new dataset & centroids
+        plotClustersFromFile();
+    #endif // PRELOOP_PRINT_AND_PLOT
 
     //Centroids recalculation Cicle, stop when the centroids don't change anymore
     do{
@@ -73,19 +83,39 @@ int main() {
         //Recalculate Clusters
         recalcClusters(c, k, data, n_rows);
 
+        #ifdef LOOP_PRINT_AND_PLOT
+            //Print to file the new dataset and the new centroids
+            printDataToFile(newDatasetFile, data, n_rows, true);
+            printCentroidsToFile(newCentroidsFile, c, k, true);
+
+            //Plot the new dataset & centroids
+            plotClustersFromFile();
+        #endif // LOOP_PRINT_AND_PLOT
+    }while(centroidsHaveChanged);
+
+    #ifdef POSTLOOP_PRINT_AND_PLOT
         //Print to file the new dataset and the new centroids
         printDataToFile(newDatasetFile, data, n_rows, true);
         printCentroidsToFile(newCentroidsFile, c, k, true);
 
         //Plot the new dataset & centroids
-        system("python3 ../dataset_display/main.py plot_clusters");
-    }while(centroidsHaveChanged);
+        plotClustersFromFile();
+    #endif // POSTLOOP_PRINT_AND_PLOT
 
-    //Plot the new dataset & centroids
-    system("python3 ../dataset_display/main.py plot_clusters");
+    //End message
     cout << "Finished! Centroids can't change anymore..\n ";
 
     return 0;
+}
+
+/**
+ * @brief   Run a Python script that plots the clusters from the two files saved
+ *          newdataset.cvs & newcentroids.cvs. This function is blocking the execution,
+ *          the plot must clused in order to contunue with the normal execution.
+ * @retval  None
+ */
+void plotClustersFromFile(){
+    system("python3 ../dataset_display/main.py plot_clusters");
 }
 
 /**
@@ -164,6 +194,10 @@ void initCentroids(Point * c, int k, Point * data, int ds_rows){
     cout << "\n Initial centroids: \n";
 
     //Find space boundaries
+    pmin.x = data[0].x;
+    pmin.y = data[0].y;
+    pmax.x = data[0].x;
+    pmax.y = data[0].y;
     for(i=0; i<ds_rows; i++){
         if(pmin.x > data[i].x)
             pmin.x = data[i].x;
@@ -343,6 +377,8 @@ bool recalcCentroids(Point * c, int k, Point * data, int ds_rows){
 
     //Iterate all the centroids
     for(j=0; j<k; j++){
+        if(j == 7)
+            cout<<"";
         newCentroidX = 0;
         newCentroidY = 0;
         meanCount = 0;
@@ -359,9 +395,11 @@ bool recalcCentroids(Point * c, int k, Point * data, int ds_rows){
             }
         }
 
-        //Set new centroid
-        c[j].x = newCentroidX / meanCount;
-        c[j].y = newCentroidY / meanCount;
+        //Set new centroid (if no node belogngs to the centroid, then leave it unchanged)
+        if(meanCount != 0){ //ZERO Division protection
+            c[j].x = newCentroidX / meanCount;
+            c[j].y = newCentroidY / meanCount;
+        }
 
         //Control if the centroid has changed
         if(oldX != c[j].x || oldY != c[j].y)
