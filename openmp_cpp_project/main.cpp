@@ -4,6 +4,7 @@
 #include <list>
 #include <math.h>
 #include <time.h>
+#include <omp.h>    //OpenMP
 
 using namespace std;
 
@@ -19,6 +20,7 @@ typedef struct{
 //#define PRELOOP_PRINT_AND_PLOT              //Decomment to enable PrintToFile & ClustersPlot before entering the algorithm's loop
 //#define LOOP_PRINT_AND_PLOT                 //Decomment to enable PrintToFile & ClustersPlot inside the algorithm's loop
 #define POSTLOOP_PRINT_AND_PLOT             //Decomment to enable PrintToFile & ClustersPlot after the algorithm's loop
+//#define PARALLEL_COMPUTAION                 //Decomment to enable parallel computaion(via OpenMP) of the clusters and centroids recalculation
 
 //Function Prototypes
 int     countLines(char *filename);
@@ -41,6 +43,9 @@ int main() {
     bool centroidsHaveChanged;
     clock_t start, end;
     double cpu_time_used;
+
+    //#pragma omp parallel
+    //printf("Hello from thread %d, nthreads %d\n", omp_get_thread_num(), omp_get_num_threads());
 
     //Get number of rows of the dataset (-1 because of the header)
     n_rows = countLines(datasetFile) - 1;
@@ -281,21 +286,25 @@ float distance2Points(Point p1, Point p2){
  * @retval  True if the clusters have change, False otherwize
  */
 bool recalcClusters(Point * c, int k, Point * data, int ds_rows){
-    int i,j, centroidIndex = 0;
-    float * distances = (float *) malloc(k * sizeof(float));
-    float minDist;
+    //int i,j;// centroidIndex = 0;
+    //float * distances = (float *) malloc(k * sizeof(float));
+    //float minDist;
     bool clustersChanged = false;
 
     //Iterate all the data points
-    for(i=0; i<ds_rows; i++){
-        centroidIndex = 0;
-        minDist = distance2Points(data[i], c[0]);
+    #ifdef PARALLEL_COMPUTAION
+    #pragma omp parallel for shared(data,c,clustersChanged)
+    #endif // PARALLEL_COMPUTAION
+    for(int i=0; i<ds_rows; i++){
+        int     centroidIndex = 0;
+        float   minDist = distance2Points(data[i], c[0]);
+        float   distance;
 
         //Get all the distances from the centroids
-        for(j=0; j<k; j++){
-            distances[j] = distance2Points(data[i], c[j]);
-            if(minDist > distances[j]){
-                minDist = distances[j];
+        for(int j=0; j<k; j++){
+            distance = distance2Points(data[i], c[j]);
+            if(minDist > distance){
+                minDist = distance;
                 centroidIndex = j;
             }
         }
@@ -388,21 +397,24 @@ void printCentroidsToFile(char *filename, Point * c, int k, bool newFile){
  * @retval  True if the centroids have change, False otherwize
  */
 bool recalcCentroids(Point * c, int k, Point * data, int ds_rows){
-    int i,j, meanCount = 0;
-    float newCentroidX, newCentroidY;
+    //int i,j;// meanCount = 0;
+    //float newCentroidX, newCentroidY;
     bool centroidsChanged = false;
-    float oldX, oldY;
+    //float oldX, oldY;
 
     //Iterate all the centroids
-    for(j=0; j<k; j++){
-        newCentroidX = 0;
-        newCentroidY = 0;
-        meanCount = 0;
-        oldX = c[j].x;
-        oldY = c[j].y;
+    #ifdef PARALLEL_COMPUTAION
+    #pragma omp parallel for shared(data,c,centroidsChanged)
+    #endif // PARALLEL_COMPUTAION
+    for(int j=0; j<k; j++){
+        float   newCentroidX = 0;
+        float   newCentroidY = 0;
+        float   oldX = c[j].x;
+        float   oldY = c[j].y;
+        int     meanCount = 0;
 
         //Iterate all the data points
-        for(i=0; i<ds_rows; i++){
+        for(int i=0; i<ds_rows; i++){
             //The datapoints that belong to this cluster
             if(data[i].cn == j){
                 newCentroidX += data[i].x;

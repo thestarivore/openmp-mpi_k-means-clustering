@@ -4,11 +4,12 @@
 	<stdlib.h>
 	<stdio.h>
 
-1545918003 source:/home/starivore/Workspace/MiddlewareTechDistSyss/projects/openmp_k-meansclustering/openmp_cpp_project/main.cpp
+1545925509 source:/home/starivore/Workspace/MiddlewareTechDistSyss/projects/openmp_k-meansclustering/openmp_cpp_project/main.cpp
 	<iostream>
 	<stdlib.h>
 	<stdio.h>
 	<list>
 	<math.h>
 	<time.h>
+	<omp.h>
 

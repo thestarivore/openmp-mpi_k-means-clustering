@@ -1,27 +1,48 @@
+Without OpenMP-Parallelization
 K=1 --> J=2812.14
-0.154ms
-0.243ms
-0.171ms
+0.193ms
+0.271ms
 
 K=2 --> J=1190.78
-0.443ms
-0.398ms
-0.267ms
+0.651ms
+0.631ms
+
 
 K=3 --> J=546.891
-0.874ms
 1.059ms
-0.646ms
+1.097ms
 
 K=4 --> J=212.006      <----- Kperfect = 4 by the KNEE-RULE
-1.088ms
-1.109ms
-1.019ms
+1.067ms
+0.613ms
+0.359ms
+0.737ms
 
 K=5 --> J=194.834
-1.760ms
-1.834ms
+1.931ms
+2.081ms
+1.522ms
 
 K=6 --> J=171.601
-2.857ms
-1.843ms
+1.653ms
+2.851ms
+1.375ms
+
+
+With OpenMP-Parallelization
+K=1 --> J=2812.14
+0.932ms 
+1.019ms
+
+K=2 --> J=1190.78
+0.652ms
+
+K=3 --> J=546.891
+1.224ms
+
+K=4 --> J=212.006      <----- Kperfect = 4 by the KNEE-RULE
+
+K=5 --> J=194.834
+
+K=6 --> J=171.601
+
