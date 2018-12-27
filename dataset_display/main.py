@@ -10,7 +10,7 @@ from sklearn.datasets.samples_generator import make_blobs
 sns.set()  # for plot styling
 
 #Samples
-N_SAMPLES = 300
+N_SAMPLES = 100000
 
 # Get path of the current dir, then use it to create paths:
 CURRENT_DIR = os.path.dirname(__file__)
@@ -38,7 +38,7 @@ def main():
 
 def createDataSet():
     X, y_true = make_blobs(n_samples=N_SAMPLES, centers=4,
-                           cluster_std=0.60, random_state=0)
+                           cluster_std=0.60, random_state=3320)
     plt.scatter(X[:, 0], X[:, 1], s=50)
     plt.show()
 

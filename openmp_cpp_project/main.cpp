@@ -58,9 +58,9 @@ int main() {
     readDataset(datasetFile, data);
 
     //Print rows in the array
-    for(int i=0; i<n_rows;i++){
+    /*for(int i=0; i<n_rows;i++){
         cout << "X = " << data[i].x << ",Y = " << data[i].y << "\n";
-    }
+    }*/
 
     //Pick K
     cout << "Number of centroids (K): ";
@@ -234,7 +234,10 @@ void initCentroids(Point * c, int k, Point * data, int ds_rows){
 
     //Set the minimum distance between the centroids
     diagonalDim = distance2Points(pmin, pmax);
-    distThreshold = diagonalDim/8;
+    distThreshold = diagonalDim/15;
+
+    //randomize rand()
+    srand(time(NULL));
 
     //Set initial centroids
     for(i=0; i<k; i++){
@@ -293,7 +296,7 @@ bool recalcClusters(Point * c, int k, Point * data, int ds_rows){
 
     //Iterate all the data points
     #ifdef PARALLEL_COMPUTAION
-    #pragma omp parallel for shared(data,c,clustersChanged)
+    #pragma omp parallel for shared(data,c,clustersChanged,k,ds_rows)
     #endif // PARALLEL_COMPUTAION
     for(int i=0; i<ds_rows; i++){
         int     centroidIndex = 0;
@@ -404,7 +407,7 @@ bool recalcCentroids(Point * c, int k, Point * data, int ds_rows){
 
     //Iterate all the centroids
     #ifdef PARALLEL_COMPUTAION
-    #pragma omp parallel for shared(data,c,centroidsChanged)
+    #pragma omp parallel for shared(data,c,centroidsChanged,k,ds_rows)
     #endif // PARALLEL_COMPUTAION
     for(int j=0; j<k; j++){
         float   newCentroidX = 0;
