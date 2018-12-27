@@ -1,5 +1,0 @@
-# depslib dependency file v1.0
-1545774174 source:/home/starivore/Workspace/MiddlewareTechDistSyss/projects/openmp_k-meansclustering/openmp_cproject/main.c
-	<stdlib.h>
-	<stdio.h>
-
