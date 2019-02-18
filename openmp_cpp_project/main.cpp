@@ -1,5 +1,6 @@
 #include <iostream>
 #include <stdlib.h>
+
 #include <stdio.h>
 #include <list>
 #include <math.h>
@@ -16,23 +17,30 @@ typedef struct{
     int   cn;    //Cluster number
 }Point;
 
+typedef enum{
+    NORMAL_MODE = 0,
+    OPEN_MP_MODE
+}ExecMode;
+
 //Defines
 //#define PRELOOP_PRINT_AND_PLOT              //Decomment to enable PrintToFile & ClustersPlot before entering the algorithm's loop
 //#define LOOP_PRINT_AND_PLOT                 //Decomment to enable PrintToFile & ClustersPlot inside the algorithm's loop
 #define POSTLOOP_PRINT_AND_PLOT             //Decomment to enable PrintToFile & ClustersPlot after the algorithm's loop
-//#define PARALLEL_COMPUTAION                 //Decomment to enable parallel computaion(via OpenMP) of the clusters and centroids recalculation
+#define PARALLEL_COMPUTAION                 //Decomment to enable parallel computaion(via OpenMP) of the clusters and centroids recalculation
+#define NUMBER_OF_THREADS 8
 
 //Function Prototypes
 int     countLines(char *filename);
 void    readDataset(char *filename, Point * data);
 void    initCentroids(Point * c, int k, Point * data, int ds_rows);
 float   distance2Points(Point p1, Point p2);
-bool    recalcClusters(Point * c, int k, Point * data, int ds_rows);
+bool    recalcClusters(Point * c, int k, Point * data, int ds_rows, ExecMode mode);
 void    printDataToFile(char *filename, Point * data, int ds_rows, bool newFile);
 void    printCentroidsToFile(char *filename, Point * data, int k, bool newFile);
-bool    recalcCentroids(Point * c, int k, Point * data, int ds_rows);
+bool    recalcCentroids(Point * c, int k, Point * data, int ds_rows, ExecMode mode);
 void    plotClustersFromFile();
 float   calcSquaredError(Point * c, int k, Point * data, int ds_rows);
+double  kMeansClustering(int k, int n_rows, char newDatasetFile[], char newCentroidsFile[], Point * data, Point * c, ExecMode mode);
 
 
 int main() {
@@ -40,12 +48,13 @@ int main() {
     char newDatasetFile[] = "../dataset_display/newdataset.csv";
     char newCentroidsFile[] = "../dataset_display/newcentroids.csv";
     int k, n_rows;
-    bool centroidsHaveChanged;
-    clock_t start, end;
-    double cpu_time_used;
+    //bool centroidsHaveChanged;
+    //clock_t start, end;
+    //double cpu_time_used;
+    double normalExecTime, openMPExecTime;
 
-    //#pragma omp parallel
-    //printf("Hello from thread %d, nthreads %d\n", omp_get_thread_num(), omp_get_num_threads());
+    //Set number of Threads
+    omp_set_num_threads(NUMBER_OF_THREADS);
 
     //Get number of rows of the dataset (-1 because of the header)
     n_rows = countLines(datasetFile) - 1;
@@ -67,7 +76,7 @@ int main() {
     cin >> k;
 
     //Start time mesurment
-    start = clock();
+ /*   start = clock();
 
     //Allocate and choose the centroids
     Point * c = (Point*) malloc(k * sizeof(Point));
@@ -126,9 +135,102 @@ int main() {
     #endif // POSTLOOP_PRINT_AND_PLOT
 
     //End message
-    cout << "Finished! Centroids can't change anymore..\n ";
+    cout << "Finished! Centroids can't change anymore..\n ";*/
+
+    //Allocate and choose the centroids
+    Point * c = (Point*) malloc(k * sizeof(Point));
+    initCentroids(c, k, data, n_rows);
+    Point * c2 = (Point*) malloc(k * sizeof(Point));
+    for(int h=0; h < k; h++){
+        (c2+h)->cn = (c+h)->cn;
+        (c2+h)->x = (c+h)->x;
+        (c2+h)->y = (c+h)->y;
+    }
+
+    //omp_set_num_threads(10);
+
+    normalExecTime = kMeansClustering(k, n_rows, newDatasetFile, newCentroidsFile, data, c, NORMAL_MODE);
+    openMPExecTime = kMeansClustering(k, n_rows, newDatasetFile, newCentroidsFile, data, c2, OPEN_MP_MODE);
+
+    cout << "K-Means Clustering Normal execution time: " << normalExecTime*1000 << "ms\n";
+    cout << "K-Means Clustering OpenMP execution time: " << openMPExecTime*1000 << "ms\n";
 
     return 0;
+}
+
+
+/**
+ * @brief   Run the K-Means Clustering Algorithm
+ * @retval  cpu_time_used   Return the execution time of the algorithm on the passed dataset
+ */
+double kMeansClustering(int k, int n_rows, char newDatasetFile[], char newCentroidsFile[], Point * data, Point * c, ExecMode mode){
+    bool centroidsHaveChanged;
+    double cpu_time_used;
+    double start, end;
+
+    //Start time mesurment
+    start = omp_get_wtime();
+
+  /*
+    //Allocate and choose the centroids
+    Point * c = (Point*) malloc(k * sizeof(Point));
+    initCentroids(c, k, data, n_rows);*/
+
+    //-------------------------------------------------------------------------------
+    //Recalculate Clusters
+    recalcClusters(c, k, data, n_rows, mode);
+
+    #ifdef PRELOOP_PRINT_AND_PLOT
+        //Print to file the new dataset and the new centroids
+        printDataToFile(newDatasetFile, data, n_rows, true);
+        printCentroidsToFile(newCentroidsFile, c, k, true);
+
+        //Plot the new dataset & centroids
+        plotClustersFromFile();
+    #endif // PRELOOP_PRINT_AND_PLOT
+
+    //Centroids recalculation Cicle, stop when the centroids don't change anymore
+    do{
+        //If data changed
+        centroidsHaveChanged = recalcCentroids(c, k, data, n_rows, mode);
+        cout << "Changed Centroids..\n ";
+
+        //Recalculate Clusters
+        recalcClusters(c, k, data, n_rows, mode);
+
+        #ifdef LOOP_PRINT_AND_PLOT
+            //Print to file the new dataset and the new centroids
+            printDataToFile(newDatasetFile, data, n_rows, true);
+            printCentroidsToFile(newCentroidsFile, c, k, true);
+
+            //Plot the new dataset & centroids
+            plotClustersFromFile();
+        #endif // LOOP_PRINT_AND_PLOT
+    }while(centroidsHaveChanged);
+
+    //End time mesurment - for an accurate time mesurment is strongly recommended to comment
+    //                     the PRELOOP_PRINT_AND_PLOT & LOOP_PRINT_AND_PLOT defines
+    end = omp_get_wtime();
+    cpu_time_used = ((double) (end - start));// / CLOCKS_PER_SEC ;
+    cout << "K-Means Clustering execution time: " << cpu_time_used << "sec\n";
+
+    //Objective function(J) calculus (Squared Error function) - Calculate an indicator(score) that can be used
+    //to choose K(number of centroids). Usually the Knee-rule is used to choose K in the J-K graph.
+    float J = calcSquaredError(c, k, data, n_rows);
+    cout << "K-Means Clustering squared error: " << J << "\n";
+
+    #ifdef POSTLOOP_PRINT_AND_PLOT
+        //Print to file the new dataset and the new centroids
+        printDataToFile(newDatasetFile, data, n_rows, true);
+        printCentroidsToFile(newCentroidsFile, c, k, true);
+
+        //Plot the new dataset & centroids
+        plotClustersFromFile();
+    #endif // POSTLOOP_PRINT_AND_PLOT
+
+    //End message
+    cout << "Finished! Centroids can't change anymore..\n ";
+    return cpu_time_used;
 }
 
 /**
@@ -288,34 +390,60 @@ float distance2Points(Point p1, Point p2){
  * @param   ds_rows number of points in the dataset
  * @retval  True if the clusters have change, False otherwize
  */
-bool recalcClusters(Point * c, int k, Point * data, int ds_rows){
+bool recalcClusters(Point * c, int k, Point * data, int ds_rows, ExecMode mode){
     //int i,j;// centroidIndex = 0;
     //float * distances = (float *) malloc(k * sizeof(float));
     //float minDist;
     bool clustersChanged = false;
 
-    //Iterate all the data points
-    #ifdef PARALLEL_COMPUTAION
-    #pragma omp parallel for shared(data,c,clustersChanged,k,ds_rows)
-    #endif // PARALLEL_COMPUTAION
-    for(int i=0; i<ds_rows; i++){
-        int     centroidIndex = 0;
-        float   minDist = distance2Points(data[i], c[0]);
-        float   distance;
+    //mode = NORMAL_MODE;
 
-        //Get all the distances from the centroids
-        for(int j=0; j<k; j++){
-            distance = distance2Points(data[i], c[j]);
-            if(minDist > distance){
-                minDist = distance;
-                centroidIndex = j;
+    //Iterate all the data points
+    //#ifdef PARALLEL_COMPUTAION
+    if(mode == OPEN_MP_MODE){
+        #pragma omp parallel shared(data, clustersChanged)
+        #pragma omp for schedule(static) nowait
+        //#endif // PARALLEL_COMPUTAION
+        for(int i=0; i<ds_rows; i++){
+            int     centroidIndex = 0;
+            float   minDist = distance2Points(data[i], c[0]);
+            float   distance;
+
+            //Get all the distances from the centroids
+            for(int j=0; j<k; j++){
+                distance = distance2Points(data[i], c[j]);
+                if(minDist > distance){
+                    minDist = distance;
+                    centroidIndex = j;
+                }
+            }
+
+            //Set new cluster number of the point
+            if(data[i].cn != centroidIndex){
+                data[i].cn = centroidIndex;
+                clustersChanged = true;
             }
         }
+    }else{
+        for(int i=0; i<ds_rows; i++){
+            int     centroidIndex = 0;
+            float   minDist = distance2Points(data[i], c[0]);
+            float   distance;
 
-        //Set new cluster number of the point
-        if(data[i].cn != centroidIndex){
-            data[i].cn = centroidIndex;
-            clustersChanged = true;
+            //Get all the distances from the centroids
+            for(int j=0; j<k; j++){
+                distance = distance2Points(data[i], c[j]);
+                if(minDist > distance){
+                    minDist = distance;
+                    centroidIndex = j;
+                }
+            }
+
+            //Set new cluster number of the point
+            if(data[i].cn != centroidIndex){
+                data[i].cn = centroidIndex;
+                clustersChanged = true;
+            }
         }
     }
     return clustersChanged;
@@ -399,42 +527,73 @@ void printCentroidsToFile(char *filename, Point * c, int k, bool newFile){
  * @param   ds_rows number of points in the dataset
  * @retval  True if the centroids have change, False otherwize
  */
-bool recalcCentroids(Point * c, int k, Point * data, int ds_rows){
+bool recalcCentroids(Point * c, int k, Point * data, int ds_rows, ExecMode mode){
     //int i,j;// meanCount = 0;
     //float newCentroidX, newCentroidY;
     bool centroidsChanged = false;
     //float oldX, oldY;
 
     //Iterate all the centroids
-    #ifdef PARALLEL_COMPUTAION
-    #pragma omp parallel for shared(data,c,centroidsChanged,k,ds_rows)
-    #endif // PARALLEL_COMPUTAION
-    for(int j=0; j<k; j++){
-        float   newCentroidX = 0;
-        float   newCentroidY = 0;
-        float   oldX = c[j].x;
-        float   oldY = c[j].y;
-        int     meanCount = 0;
+    //#ifdef PARALLEL_COMPUTAION
+    if(mode == OPEN_MP_MODE){
+        #pragma omp parallel shared(c, centroidsChanged)
+        #pragma omp for schedule(static) nowait
+        //#endif // PARALLEL_COMPUTAION
+        for(int j=0; j<k; j++){
+            float   newCentroidX = 0;
+            float   newCentroidY = 0;
+            float   oldX = c[j].x;
+            float   oldY = c[j].y;
+            int     meanCount = 0;
 
-        //Iterate all the data points
-        for(int i=0; i<ds_rows; i++){
-            //The datapoints that belong to this cluster
-            if(data[i].cn == j){
-                newCentroidX += data[i].x;
-                newCentroidY += data[i].y;
-                meanCount++;
+            //Iterate all the data points
+            for(int i=0; i<ds_rows; i++){
+                //The datapoints that belong to this cluster
+                if(data[i].cn == j){
+                    newCentroidX += data[i].x;
+                    newCentroidY += data[i].y;
+                    meanCount++;
+                }
             }
-        }
 
-        //Set new centroid (if no node belogngs to the centroid, then leave it unchanged)
-        if(meanCount != 0){ //ZERO Division protection
-            c[j].x = newCentroidX / meanCount;
-            c[j].y = newCentroidY / meanCount;
-        }
+            //Set new centroid (if no node belogngs to the centroid, then leave it unchanged)
+            if(meanCount != 0){ //ZERO Division protection
+                c[j].x = newCentroidX / meanCount;
+                c[j].y = newCentroidY / meanCount;
+            }
 
-        //Control if the centroid has changed
-        if(oldX != c[j].x || oldY != c[j].y)
-            centroidsChanged = true;
+            //Control if the centroid has changed
+            if(oldX != c[j].x || oldY != c[j].y)
+                centroidsChanged = true;
+        }
+    }else{
+        for(int j=0; j<k; j++){
+            float   newCentroidX = 0;
+            float   newCentroidY = 0;
+            float   oldX = c[j].x;
+            float   oldY = c[j].y;
+            int     meanCount = 0;
+
+            //Iterate all the data points
+            for(int i=0; i<ds_rows; i++){
+                //The datapoints that belong to this cluster
+                if(data[i].cn == j){
+                    newCentroidX += data[i].x;
+                    newCentroidY += data[i].y;
+                    meanCount++;
+                }
+            }
+
+            //Set new centroid (if no node belogngs to the centroid, then leave it unchanged)
+            if(meanCount != 0){ //ZERO Division protection
+                c[j].x = newCentroidX / meanCount;
+                c[j].y = newCentroidY / meanCount;
+            }
+
+            //Control if the centroid has changed
+            if(oldX != c[j].x || oldY != c[j].y)
+                centroidsChanged = true;
+        }
     }
 
     return centroidsChanged;
