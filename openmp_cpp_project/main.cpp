@@ -5,7 +5,8 @@
 #include <list>
 #include <math.h>
 #include <time.h>
-#include <omp.h>    //OpenMP
+#include <omp.h>    //OpenMP Library
+#include "mpi.h"    //MPI Library
 
 using namespace std;
 
@@ -19,7 +20,8 @@ typedef struct{
 
 typedef enum{
     NORMAL_MODE = 0,
-    OPEN_MP_MODE
+    OPEN_MP_MODE,
+    MPI_MODE,
 }ExecMode;
 
 //Defines
@@ -27,7 +29,7 @@ typedef enum{
 //#define LOOP_PRINT_AND_PLOT                 //Decomment to enable PrintToFile & ClustersPlot inside the algorithm's loop
 #define POSTLOOP_PRINT_AND_PLOT             //Decomment to enable PrintToFile & ClustersPlot after the algorithm's loop
 #define PARALLEL_COMPUTAION                 //Decomment to enable parallel computaion(via OpenMP) of the clusters and centroids recalculation
-#define NUMBER_OF_THREADS 8
+//#define NUMBER_OF_THREADS 8
 
 //Function Prototypes
 int     countLines(char *filename);
@@ -42,118 +44,114 @@ void    plotClustersFromFile();
 float   calcSquaredError(Point * c, int k, Point * data, int ds_rows);
 double  kMeansClustering(int k, int n_rows, char newDatasetFile[], char newCentroidsFile[], Point * data, Point * c, ExecMode mode);
 
+int numtasks, rank;
+MPI_Datatype mpi_point_type;
 
-int main() {
+int main(int argc, char *argv[]) {
     char datasetFile[] = "../dataset_display/dataset.csv";
     char newDatasetFile[] = "../dataset_display/newdataset.csv";
     char newCentroidsFile[] = "../dataset_display/newcentroids.csv";
-    int k, n_rows;
+    int k, n_rows, rc;
     //bool centroidsHaveChanged;
     //clock_t start, end;
     //double cpu_time_used;
-    double normalExecTime, openMPExecTime;
+    double normalExecTime, openMPExecTime, mpiExecTime;
+    Point *data, *c, *c2, *c3;
 
-    //Set number of Threads
-    omp_set_num_threads(NUMBER_OF_THREADS);
 
-    //Get number of rows of the dataset (-1 because of the header)
-    n_rows = countLines(datasetFile) - 1;
-    cout << "Number of rows in the file: " << n_rows << "\n";
+    //Initialize the MPI execution environment
+    MPI_Init(0,0);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &numtasks);
 
-    //Allocate the Arrays for the initial dataset
-    Point * data = (Point*) malloc(n_rows * sizeof(Point));
+    if(rank == 0){
+        //Set number of Threads
+        omp_set_num_threads(omp_get_max_threads());
 
-    //Read the dataset
-    readDataset(datasetFile, data);
+        //Get number of rows of the dataset (-1 because of the header)
+        n_rows = countLines(datasetFile) - 1;
+        cout << "Number of rows in the file: " << n_rows << "\n";
 
-    //Print rows in the array
-    /*for(int i=0; i<n_rows;i++){
-        cout << "X = " << data[i].x << ",Y = " << data[i].y << "\n";
-    }*/
+        //Allocate the Arrays for the initial dataset
+        data = (Point*) malloc(n_rows * sizeof(Point));
 
-    //Pick K
-    cout << "Number of centroids (K): ";
-    cin >> k;
+        //Read the dataset
+        readDataset(datasetFile, data);
 
-    //Start time mesurment
- /*   start = clock();
+        //Print rows in the array
+        /*for(int i=0; i<n_rows;i++){
+            cout << "X = " << data[i].x << ",Y = " << data[i].y << "\n";
+        }*/
 
-    //Allocate and choose the centroids
-    Point * c = (Point*) malloc(k * sizeof(Point));
-    initCentroids(c, k, data, n_rows);
+        //Pick K
+        cout << "Number of centroids (K): ";
+        cin >> k;
 
-    //-------------------------------------------------------------------------------
-    //Recalculate Clusters
-    recalcClusters(c, k, data, n_rows);
-
-    #ifdef PRELOOP_PRINT_AND_PLOT
-        //Print to file the new dataset and the new centroids
-        printDataToFile(newDatasetFile, data, n_rows, true);
-        printCentroidsToFile(newCentroidsFile, c, k, true);
-
-        //Plot the new dataset & centroids
-        plotClustersFromFile();
-    #endif // PRELOOP_PRINT_AND_PLOT
-
-    //Centroids recalculation Cicle, stop when the centroids don't change anymore
-    do{
-        //If data changed
-        centroidsHaveChanged = recalcCentroids(c, k, data, n_rows);
-        cout << "Changed Centroids..\n ";
-
-        //Recalculate Clusters
-        recalcClusters(c, k, data, n_rows);
-
-        #ifdef LOOP_PRINT_AND_PLOT
-            //Print to file the new dataset and the new centroids
-            printDataToFile(newDatasetFile, data, n_rows, true);
-            printCentroidsToFile(newCentroidsFile, c, k, true);
-
-            //Plot the new dataset & centroids
-            plotClustersFromFile();
-        #endif // LOOP_PRINT_AND_PLOT
-    }while(centroidsHaveChanged);
-
-    //End time mesurment - for an accurate time mesurment is strongly recommended to comment
-    //                     the PRELOOP_PRINT_AND_PLOT & LOOP_PRINT_AND_PLOT defines
-    end = clock();
-    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC ;
-    cout << "K-Means Clustering execution time: " << cpu_time_used*1000 << "ms\n";
-
-    //Objective function(J) calculus (Squared Error function) - Calculate an indicator(score) that can be used
-    //to choose K(number of centroids). Usually the Knee-rule is used to choose K in the J-K graph.
-    float J = calcSquaredError(c, k, data, n_rows);
-    cout << "K-Means Clustering squared error: " << J << "\n";
-
-    #ifdef POSTLOOP_PRINT_AND_PLOT
-        //Print to file the new dataset and the new centroids
-        printDataToFile(newDatasetFile, data, n_rows, true);
-        printCentroidsToFile(newCentroidsFile, c, k, true);
-
-        //Plot the new dataset & centroids
-        plotClustersFromFile();
-    #endif // POSTLOOP_PRINT_AND_PLOT
-
-    //End message
-    cout << "Finished! Centroids can't change anymore..\n ";*/
-
-    //Allocate and choose the centroids
-    Point * c = (Point*) malloc(k * sizeof(Point));
-    initCentroids(c, k, data, n_rows);
-    Point * c2 = (Point*) malloc(k * sizeof(Point));
-    for(int h=0; h < k; h++){
-        (c2+h)->cn = (c+h)->cn;
-        (c2+h)->x = (c+h)->x;
-        (c2+h)->y = (c+h)->y;
+        //Allocate and choose the centroids
+        c = (Point*) malloc(k * sizeof(Point));
+        c2 = (Point*) malloc(k * sizeof(Point));
+        c3 = (Point*) malloc(k * sizeof(Point));
+        initCentroids(c, k, data, n_rows);
+        for(int h=0; h < k; h++){
+            (c2+h)->cn  = (c+h)->cn;
+            (c2+h)->x   = (c+h)->x;
+            (c2+h)->y   = (c+h)->y;
+            (c3+h)->cn  = (c+h)->cn;
+            (c3+h)->x   = (c+h)->x;
+            (c3+h)->y   = (c+h)->y;
+        }
     }
 
-    //omp_set_num_threads(10);
+    MPI_Barrier(MPI_COMM_WORLD);
+    //printf("\nDEBUG\n");
 
-    normalExecTime = kMeansClustering(k, n_rows, newDatasetFile, newCentroidsFile, data, c, NORMAL_MODE);
-    openMPExecTime = kMeansClustering(k, n_rows, newDatasetFile, newCentroidsFile, data, c2, OPEN_MP_MODE);
+    //Boardcast the number of rows: n_rows
+    rc = MPI_Bcast(&n_rows, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    printf("Task %d: received  n_rows = %d\n", rank, n_rows);
 
-    cout << "K-Means Clustering Normal execution time: " << normalExecTime*1000 << "ms\n";
-    cout << "K-Means Clustering OpenMP execution time: " << openMPExecTime*1000 << "ms\n";
+    //Boardcast the number of clusters: K
+    rc = MPI_Bcast(&k, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    printf("Task %d: received  k = %d\n", rank, k);
+
+    //Create MPI DataType for Point
+    const int    nitems=3;
+    int          blocklengths[3] = {1,1,1};
+    MPI_Datatype types[3] = {MPI_FLOAT, MPI_FLOAT, MPI_INT};
+    MPI_Aint     offsets[3];
+
+    offsets[0] = offsetof(Point, x);
+    offsets[1] = offsetof(Point, y);
+    offsets[2] = offsetof(Point, cn);
+
+    MPI_Type_create_struct(nitems, blocklengths, offsets, types, &mpi_point_type);
+    MPI_Type_commit(&mpi_point_type);
+
+    //Boardcast the data
+    if(rank != 0)   //Allocate data for the other processes
+        data = (Point*) malloc(n_rows * sizeof(Point));
+    rc = MPI_Bcast(data, n_rows, mpi_point_type, 0, MPI_COMM_WORLD);
+
+    //Boardcast the clusters
+    if(rank != 0)   //Allocate the clusters for the other processes
+        c3 = (Point*) malloc(k * sizeof(Point));
+    rc = MPI_Bcast(c3, k, mpi_point_type, 0, MPI_COMM_WORLD);
+
+    //Execute the K-Means Clustering with three different approaces and record the execution time
+    //normalExecTime  = kMeansClustering(k, n_rows, newDatasetFile, newCentroidsFile, data, c, NORMAL_MODE);
+    //openMPExecTime  = kMeansClustering(k, n_rows, newDatasetFile, newCentroidsFile, data, c2, OPEN_MP_MODE);
+    mpiExecTime     = kMeansClustering(k, n_rows, newDatasetFile, newCentroidsFile, data, c3, MPI_MODE);
+
+    //Show Execution time for each aproach
+   // if(rank == 0){
+        cout << "K-Means Clustering Normal execution time: "    << normalExecTime   * 1000 << "ms\n";
+        cout << "K-Means Clustering OpenMP execution time: "    << openMPExecTime   * 1000 << "ms\n";
+        cout << "K-Means Clustering MPI execution time: "       << mpiExecTime      * 1000 << "ms\n";
+    //}
+
+    cout << "Process " << rank << " has finished!\n";
+
+    //Terminate the MPI execution environment
+    MPI_Finalize();
 
     return 0;
 }
@@ -167,9 +165,12 @@ double kMeansClustering(int k, int n_rows, char newDatasetFile[], char newCentro
     bool centroidsHaveChanged;
     double cpu_time_used;
     double start, end;
+    MPI_Status stat;
+    int rc;
 
     //Start time mesurment
-    start = omp_get_wtime();
+    if(rank == 0)
+        start = omp_get_wtime();
 
   /*
     //Allocate and choose the centroids
@@ -179,57 +180,143 @@ double kMeansClustering(int k, int n_rows, char newDatasetFile[], char newCentro
     //-------------------------------------------------------------------------------
     //Recalculate Clusters
     recalcClusters(c, k, data, n_rows, mode);
+    //MPI_Barrier(MPI_COMM_WORLD);
+
+    //Caculate Start and End row for each task
+    int rowsPerProc = n_rows / numtasks;
+    int startRow = rank * rowsPerProc;
+    int endRow   = startRow + rowsPerProc;
+    int numRows  = endRow-startRow;
+    if(rank == (numtasks-1))
+        endRow = n_rows;
+
+    //Allocate and fill the sendData
+    Point * sendData = (Point*) malloc(numRows * sizeof(Point));
+    for(int i=startRow; i<endRow; i++){
+        sendData[i-startRow] = data[i];
+    }
+
+    //Gatter data from all proc
+    MPI_Gather(sendData, numRows, mpi_point_type, data, numRows, mpi_point_type, 0, MPI_COMM_WORLD);
+    //cout << "Process " << rank << " has gathered outside doWhile!\n";
+
+    /*if(rank == 0){
+        for(int i=0; i<n_rows; i++){
+            cout << data[i].x << "," << data[i].y << "," << data[i].cn << ";\n";
+        }
+    }*/
+
+    //Print Clusters //TODO: delete
+    //if(rank == 0){for(int l=0; l<k; l++){cout << "Centroid: x=" << c[l].x << ", y=" << c[l].y << "\n";}}
 
     #ifdef PRELOOP_PRINT_AND_PLOT
-        //Print to file the new dataset and the new centroids
-        printDataToFile(newDatasetFile, data, n_rows, true);
-        printCentroidsToFile(newCentroidsFile, c, k, true);
-
-        //Plot the new dataset & centroids
-        plotClustersFromFile();
-    #endif // PRELOOP_PRINT_AND_PLOT
-
-    //Centroids recalculation Cicle, stop when the centroids don't change anymore
-    do{
-        //If data changed
-        centroidsHaveChanged = recalcCentroids(c, k, data, n_rows, mode);
-        cout << "Changed Centroids..\n ";
-
-        //Recalculate Clusters
-        recalcClusters(c, k, data, n_rows, mode);
-
-        #ifdef LOOP_PRINT_AND_PLOT
+        if(rank == 0){
             //Print to file the new dataset and the new centroids
             printDataToFile(newDatasetFile, data, n_rows, true);
             printCentroidsToFile(newCentroidsFile, c, k, true);
 
             //Plot the new dataset & centroids
             plotClustersFromFile();
+        }
+    #endif // PRELOOP_PRINT_AND_PLOT
+
+    //Caculate Start and End clusters for each task
+    int clustersPerProc = k / numtasks;
+    int startCluster = rank * clustersPerProc;
+    int endCluster   = startCluster + clustersPerProc;
+    if(rank == (numtasks-1))        //the last proc gets all the remaining clusters
+        endCluster = k;
+    int numClusters  = endCluster - startCluster;
+
+    //Allocate the sendClusters
+    Point * sendClusters = (Point*) malloc(numClusters * sizeof(Point));
+
+    //integer array (of length group size) containing the number of elements that are received from each process
+    int recvcounts[numtasks];
+    //integer array (of length group size). Entry i specifies the displacement(relative to recvbuf) at which to place the incoming data from process i
+    int displs[numtasks];
+    //Fill the two arrays for the MPI_Allgatherv functions, in order to be able to gather data of different size
+    for(int l=0; l<numtasks; l++){
+        recvcounts[l] = clustersPerProc;
+        displs[l] = l * clustersPerProc;
+        if(l == (numtasks-1)){
+            recvcounts[l] = k - 3 * clustersPerProc;
+        }
+        //printf("recvcounts[%d] = %d\n", l, recvcounts[l]);
+        //printf("displs[%d] = %d\n", l, displs[l]);
+    }
+
+    //Centroids recalculation Cicle, stop when the centroids don't change anymore
+    do{
+        //If data changed
+        centroidsHaveChanged = recalcCentroids(c, k, data, n_rows, mode);
+
+        //rc = MPI_Bcast(c, k, mpi_point_type, 0, MPI_COMM_WORLD);
+        //rc = MPI_Bcast(&centroidsHaveChanged, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
+
+        //Fill the sendClusters
+        for(int i=startCluster; i<endCluster; i++){
+            sendClusters[i-startCluster] = c[i];
+        }
+
+        //Gatter clusters from all proc
+        MPI_Allgatherv(sendClusters, numClusters, mpi_point_type, c, recvcounts, displs, mpi_point_type, MPI_COMM_WORLD);
+
+        //Reduce the centroidsHaveChanged Flag for all proceses
+        bool lchc = centroidsHaveChanged;
+        MPI_Allreduce(&lchc, &centroidsHaveChanged, 1, MPI_C_BOOL, MPI_LOR, MPI_COMM_WORLD);
+        if(rank == 0)
+            cout << "Changed Centroids..\n ";
+
+        //Recalculate Clusters
+        recalcClusters(c, k, data, n_rows, mode);
+        //MPI_Barrier(MPI_COMM_WORLD);
+
+        //Fill the sendData
+        for(int i=startRow; i<endRow; i++){
+            sendData[i-startRow] = data[i];
+        }
+
+        //Gatter data from all proc
+        MPI_Allgather(sendData, numRows, mpi_point_type, data, numRows, mpi_point_type, MPI_COMM_WORLD);
+        //cout << "Process " << rank << " has gathered inside doWhile!\n";
+
+        #ifdef LOOP_PRINT_AND_PLOT
+            if(rank == 0){
+                //Print to file the new dataset and the new centroids
+                printDataToFile(newDatasetFile, data, n_rows, true);
+                printCentroidsToFile(newCentroidsFile, c, k, true);
+
+                //Plot the new dataset & centroids
+                plotClustersFromFile();
+            }
         #endif // LOOP_PRINT_AND_PLOT
     }while(centroidsHaveChanged);
 
-    //End time mesurment - for an accurate time mesurment is strongly recommended to comment
-    //                     the PRELOOP_PRINT_AND_PLOT & LOOP_PRINT_AND_PLOT defines
-    end = omp_get_wtime();
-    cpu_time_used = ((double) (end - start));// / CLOCKS_PER_SEC ;
-    cout << "K-Means Clustering execution time: " << cpu_time_used << "sec\n";
+    if(rank == 0){
+        //End time mesurment - for an accurate time mesurment is strongly recommended to comment
+        //                     the PRELOOP_PRINT_AND_PLOT & LOOP_PRINT_AND_PLOT defines
+        end = omp_get_wtime();
+        cpu_time_used = ((double) (end - start));// / CLOCKS_PER_SEC ;
+        cout << "K-Means Clustering execution time: " << cpu_time_used << "sec\n";
 
-    //Objective function(J) calculus (Squared Error function) - Calculate an indicator(score) that can be used
-    //to choose K(number of centroids). Usually the Knee-rule is used to choose K in the J-K graph.
-    float J = calcSquaredError(c, k, data, n_rows);
-    cout << "K-Means Clustering squared error: " << J << "\n";
+        //Objective function(J) calculus (Squared Error function) - Calculate an indicator(score) that can be used
+        //to choose K(number of centroids). Usually the Knee-rule is used to choose K in the J-K graph.
+        float J = calcSquaredError(c, k, data, n_rows);
+        cout << "K-Means Clustering squared error: " << J << "\n";
 
-    #ifdef POSTLOOP_PRINT_AND_PLOT
-        //Print to file the new dataset and the new centroids
-        printDataToFile(newDatasetFile, data, n_rows, true);
-        printCentroidsToFile(newCentroidsFile, c, k, true);
+        #ifdef POSTLOOP_PRINT_AND_PLOT
+            //Print to file the new dataset and the new centroids
+            printDataToFile(newDatasetFile, data, n_rows, true);
+            printCentroidsToFile(newCentroidsFile, c, k, true);
 
-        //Plot the new dataset & centroids
-        plotClustersFromFile();
-    #endif // POSTLOOP_PRINT_AND_PLOT
+            //Plot the new dataset & centroids
+            plotClustersFromFile();
+        #endif // POSTLOOP_PRINT_AND_PLOT
 
-    //End message
-    cout << "Finished! Centroids can't change anymore..\n ";
+        //End message
+        cout << "Finished! Centroids can't change anymore..\n ";
+    }
     return cpu_time_used;
 }
 
@@ -399,17 +486,19 @@ bool recalcClusters(Point * c, int k, Point * data, int ds_rows, ExecMode mode){
     //mode = NORMAL_MODE;
 
     //Iterate all the data points
-    //#ifdef PARALLEL_COMPUTAION
     if(mode == OPEN_MP_MODE){
         #pragma omp parallel shared(data, clustersChanged)
-        #pragma omp for schedule(static) nowait
-        //#endif // PARALLEL_COMPUTAION
+        #pragma omp for schedule(static)
         for(int i=0; i<ds_rows; i++){
             int     centroidIndex = 0;
             float   minDist = distance2Points(data[i], c[0]);
             float   distance;
 
+            //cout << "recalc cluster by thread " << omp_get_thread_num() << endl;
+
             //Get all the distances from the centroids
+            //#pragma omp parallel shared(minDist, centroidIndex)
+            //#pragma omp for schedule(static)
             for(int j=0; j<k; j++){
                 distance = distance2Points(data[i], c[j]);
                 if(minDist > distance){
@@ -423,6 +512,44 @@ bool recalcClusters(Point * c, int k, Point * data, int ds_rows, ExecMode mode){
                 data[i].cn = centroidIndex;
                 clustersChanged = true;
             }
+        }
+    }else if(mode == MPI_MODE){
+        if (numtasks == 4) {
+            int rowsPerProc = ds_rows / numtasks;
+
+            //Claculate Start and End row for each task
+            int startRow = rank * rowsPerProc;
+            int endRow   = startRow + rowsPerProc;
+            if(rank == (numtasks-1))
+                endRow = ds_rows;
+
+            //printf("I am process %d out of %d. Processing rows %d-%d \n", rank, numtasks, startRow, endRow);
+
+            //Iterate the rows assigned to each task
+            for(int i=startRow; i<endRow; i++){
+                int     centroidIndex = 0;
+                float   minDist = distance2Points(data[i], c[0]);
+                float   distance;
+
+                //Get all the distances from the centroids
+                for(int j=0; j<k; j++){
+                    distance = distance2Points(data[i], c[j]);
+                    if(minDist > distance){
+                        minDist = distance;
+                        centroidIndex = j;
+                    }
+                }
+
+                //Set new cluster number of the point
+                if(data[i].cn != centroidIndex){
+                    data[i].cn = centroidIndex;
+                    clustersChanged = true;
+                }
+            }
+
+
+        } else {
+            printf("Error, you must specify 4 tasks\n");
         }
     }else{
         for(int i=0; i<ds_rows; i++){
@@ -534,11 +661,9 @@ bool recalcCentroids(Point * c, int k, Point * data, int ds_rows, ExecMode mode)
     //float oldX, oldY;
 
     //Iterate all the centroids
-    //#ifdef PARALLEL_COMPUTAION
     if(mode == OPEN_MP_MODE){
         #pragma omp parallel shared(c, centroidsChanged)
-        #pragma omp for schedule(static) nowait
-        //#endif // PARALLEL_COMPUTAION
+        #pragma omp for schedule(static)
         for(int j=0; j<k; j++){
             float   newCentroidX = 0;
             float   newCentroidY = 0;
@@ -546,7 +671,11 @@ bool recalcCentroids(Point * c, int k, Point * data, int ds_rows, ExecMode mode)
             float   oldY = c[j].y;
             int     meanCount = 0;
 
+            //cout << "recalc centroid by thread " << omp_get_thread_num() << endl;
+
             //Iterate all the data points
+            //#pragma omp parallel shared(newCentroidX, newCentroidY, meanCount)
+            //#pragma omp for schedule(static)
             for(int i=0; i<ds_rows; i++){
                 //The datapoints that belong to this cluster
                 if(data[i].cn == j){
@@ -565,6 +694,47 @@ bool recalcCentroids(Point * c, int k, Point * data, int ds_rows, ExecMode mode)
             //Control if the centroid has changed
             if(oldX != c[j].x || oldY != c[j].y)
                 centroidsChanged = true;
+        }
+    }else if(mode == MPI_MODE){
+        if (numtasks == 4) {
+            int clustersPerProc = k / numtasks;
+
+            //Calculate Start and End clusters for each task
+            int startCluster = rank * clustersPerProc;
+            int endCluster   = startCluster + clustersPerProc;
+            if(rank == (numtasks-1))        //the last proc gets all the remaining clusters
+                endCluster = k;
+
+            //printf("I am process %d out of %d. Processing clusters %d-%d \n", rank, numtasks, startCluster, endCluster);
+            for(int j=startCluster; j<endCluster; j++){
+                float   newCentroidX = 0;
+                float   newCentroidY = 0;
+                float   oldX = c[j].x;
+                float   oldY = c[j].y;
+                int     meanCount = 0;
+
+                //Iterate all the data points
+                for(int i=0; i<ds_rows; i++){
+                    //The datapoints that belong to this cluster
+                    if(data[i].cn == j){
+                        newCentroidX += data[i].x;
+                        newCentroidY += data[i].y;
+                        meanCount++;
+                    }
+                }
+
+                //Set new centroid (if no node belogngs to the centroid, then leave it unchanged)
+                if(meanCount != 0){ //ZERO Division protection
+                    c[j].x = newCentroidX / meanCount;
+                    c[j].y = newCentroidY / meanCount;
+                }
+
+                //Control if the centroid has changed
+                if(oldX != c[j].x || oldY != c[j].y)
+                    centroidsChanged = true;
+            }
+        } else {
+            printf("Error, you must specify 4 tasks\n");
         }
     }else{
         for(int j=0; j<k; j++){

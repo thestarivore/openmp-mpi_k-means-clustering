@@ -4,7 +4,7 @@
 	<stdlib.h>
 	<stdio.h>
 
-1550527923 source:/home/starivore/Workspace/MiddlewareTechDistSyss/projects/openmp_k-meansclustering/openmp_cpp_project/main.cpp
+1551131202 source:/home/starivore/Workspace/MiddlewareTechDistSyss/projects/openmp_k-meansclustering/openmp_cpp_project/main.cpp
 	<iostream>
 	<stdlib.h>
 	<stdio.h>
@@ -12,4 +12,5 @@
 	<math.h>
 	<time.h>
 	<omp.h>
+	"mpi.h"
 
