@@ -137,16 +137,20 @@ int main(int argc, char *argv[]) {
     rc = MPI_Bcast(c3, k, mpi_point_type, 0, MPI_COMM_WORLD);
 
     //Execute the K-Means Clustering with three different approaces and record the execution time
-    //normalExecTime  = kMeansClustering(k, n_rows, newDatasetFile, newCentroidsFile, data, c, NORMAL_MODE);
-    //openMPExecTime  = kMeansClustering(k, n_rows, newDatasetFile, newCentroidsFile, data, c2, OPEN_MP_MODE);
+    if(rank == 0){
+        normalExecTime  = kMeansClustering(k, n_rows, newDatasetFile, newCentroidsFile, data, c, NORMAL_MODE);
+        openMPExecTime  = kMeansClustering(k, n_rows, newDatasetFile, newCentroidsFile, data, c2, OPEN_MP_MODE);
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
     mpiExecTime     = kMeansClustering(k, n_rows, newDatasetFile, newCentroidsFile, data, c3, MPI_MODE);
 
     //Show Execution time for each aproach
-   // if(rank == 0){
+    MPI_Barrier(MPI_COMM_WORLD);
+    if(rank == 0){
         cout << "K-Means Clustering Normal execution time: "    << normalExecTime   * 1000 << "ms\n";
         cout << "K-Means Clustering OpenMP execution time: "    << openMPExecTime   * 1000 << "ms\n";
         cout << "K-Means Clustering MPI execution time: "       << mpiExecTime      * 1000 << "ms\n";
-    //}
+    }
 
     cout << "Process " << rank << " has finished!\n";
 
@@ -172,42 +176,41 @@ double kMeansClustering(int k, int n_rows, char newDatasetFile[], char newCentro
     if(rank == 0)
         start = omp_get_wtime();
 
-  /*
-    //Allocate and choose the centroids
-    Point * c = (Point*) malloc(k * sizeof(Point));
-    initCentroids(c, k, data, n_rows);*/
+    int rowsPerProc, startRow, endRow, numRows;
+    Point * sendData;
+    if(mode == MPI_MODE){
+        //-------------------------------------------------------------------------------
+        //Recalculate Clusters
+        recalcClusters(c, k, data, n_rows, mode);
+        //MPI_Barrier(MPI_COMM_WORLD);
 
-    //-------------------------------------------------------------------------------
-    //Recalculate Clusters
-    recalcClusters(c, k, data, n_rows, mode);
-    //MPI_Barrier(MPI_COMM_WORLD);
+        //Caculate Start and End row for each task
+        rowsPerProc = n_rows / numtasks;
+        startRow = rank * rowsPerProc;
+        endRow   = startRow + rowsPerProc;
+        numRows  = endRow-startRow;
+        if(rank == (numtasks-1))
+            endRow = n_rows;
 
-    //Caculate Start and End row for each task
-    int rowsPerProc = n_rows / numtasks;
-    int startRow = rank * rowsPerProc;
-    int endRow   = startRow + rowsPerProc;
-    int numRows  = endRow-startRow;
-    if(rank == (numtasks-1))
-        endRow = n_rows;
-
-    //Allocate and fill the sendData
-    Point * sendData = (Point*) malloc(numRows * sizeof(Point));
-    for(int i=startRow; i<endRow; i++){
-        sendData[i-startRow] = data[i];
-    }
-
-    //Gatter data from all proc
-    MPI_Gather(sendData, numRows, mpi_point_type, data, numRows, mpi_point_type, 0, MPI_COMM_WORLD);
-    //cout << "Process " << rank << " has gathered outside doWhile!\n";
-
-    /*if(rank == 0){
-        for(int i=0; i<n_rows; i++){
-            cout << data[i].x << "," << data[i].y << "," << data[i].cn << ";\n";
+        //Allocate and fill the sendData
+        sendData = (Point*) malloc(numRows * sizeof(Point));
+        for(int i=startRow; i<endRow; i++){
+            sendData[i-startRow] = data[i];
         }
-    }*/
 
-    //Print Clusters //TODO: delete
-    //if(rank == 0){for(int l=0; l<k; l++){cout << "Centroid: x=" << c[l].x << ", y=" << c[l].y << "\n";}}
+        //Gatter data from all proc
+        MPI_Gather(sendData, numRows, mpi_point_type, data, numRows, mpi_point_type, 0, MPI_COMM_WORLD);
+        //cout << "Process " << rank << " has gathered outside doWhile!\n";
+
+        /*if(rank == 0){
+            for(int i=0; i<n_rows; i++){
+                cout << data[i].x << "," << data[i].y << "," << data[i].cn << ";\n";
+            }
+        }*/
+
+        //Print Clusters //TODO: delete
+        //if(rank == 0){for(int l=0; l<k; l++){cout << "Centroid: x=" << c[l].x << ", y=" << c[l].y << "\n";}}
+    }
 
     #ifdef PRELOOP_PRINT_AND_PLOT
         if(rank == 0){
@@ -220,30 +223,36 @@ double kMeansClustering(int k, int n_rows, char newDatasetFile[], char newCentro
         }
     #endif // PRELOOP_PRINT_AND_PLOT
 
-    //Caculate Start and End clusters for each task
-    int clustersPerProc = k / numtasks;
-    int startCluster = rank * clustersPerProc;
-    int endCluster   = startCluster + clustersPerProc;
-    if(rank == (numtasks-1))        //the last proc gets all the remaining clusters
-        endCluster = k;
-    int numClusters  = endCluster - startCluster;
-
-    //Allocate the sendClusters
-    Point * sendClusters = (Point*) malloc(numClusters * sizeof(Point));
-
+    int clustersPerProc, startCluster, endCluster, numClusters;
+    Point * sendClusters;
     //integer array (of length group size) containing the number of elements that are received from each process
     int recvcounts[numtasks];
     //integer array (of length group size). Entry i specifies the displacement(relative to recvbuf) at which to place the incoming data from process i
     int displs[numtasks];
-    //Fill the two arrays for the MPI_Allgatherv functions, in order to be able to gather data of different size
-    for(int l=0; l<numtasks; l++){
-        recvcounts[l] = clustersPerProc;
-        displs[l] = l * clustersPerProc;
-        if(l == (numtasks-1)){
-            recvcounts[l] = k - 3 * clustersPerProc;
+
+    if(mode == MPI_MODE){
+        //Caculate Start and End clusters for each task
+        clustersPerProc = k / numtasks;
+        startCluster = rank * clustersPerProc;
+        endCluster   = startCluster + clustersPerProc;
+        if(rank == (numtasks-1))        //the last proc gets all the remaining clusters
+            endCluster = k;
+        numClusters  = endCluster - startCluster;
+
+        //Allocate the sendClusters
+        sendClusters = (Point*) malloc(numClusters * sizeof(Point));
+
+
+        //Fill the two arrays for the MPI_Allgatherv functions, in order to be able to gather data of different size
+        for(int l=0; l<numtasks; l++){
+            recvcounts[l] = clustersPerProc;
+            displs[l] = l * clustersPerProc;
+            if(l == (numtasks-1)){
+                recvcounts[l] = k - 3 * clustersPerProc;
+            }
+            //printf("recvcounts[%d] = %d\n", l, recvcounts[l]);
+            //printf("displs[%d] = %d\n", l, displs[l]);
         }
-        //printf("recvcounts[%d] = %d\n", l, recvcounts[l]);
-        //printf("displs[%d] = %d\n", l, displs[l]);
     }
 
     //Centroids recalculation Cicle, stop when the centroids don't change anymore
@@ -254,17 +263,20 @@ double kMeansClustering(int k, int n_rows, char newDatasetFile[], char newCentro
         //rc = MPI_Bcast(c, k, mpi_point_type, 0, MPI_COMM_WORLD);
         //rc = MPI_Bcast(&centroidsHaveChanged, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
 
-        //Fill the sendClusters
-        for(int i=startCluster; i<endCluster; i++){
-            sendClusters[i-startCluster] = c[i];
+        if(mode == MPI_MODE){
+            //Fill the sendClusters
+            for(int i=startCluster; i<endCluster; i++){
+                sendClusters[i-startCluster] = c[i];
+            }
+
+            //Gatter clusters from all proc
+            MPI_Allgatherv(sendClusters, numClusters, mpi_point_type, c, recvcounts, displs, mpi_point_type, MPI_COMM_WORLD);
+
+            //Reduce the centroidsHaveChanged Flag for all proceses
+            bool lchc = centroidsHaveChanged;
+            MPI_Allreduce(&lchc, &centroidsHaveChanged, 1, MPI_C_BOOL, MPI_LOR, MPI_COMM_WORLD);
         }
 
-        //Gatter clusters from all proc
-        MPI_Allgatherv(sendClusters, numClusters, mpi_point_type, c, recvcounts, displs, mpi_point_type, MPI_COMM_WORLD);
-
-        //Reduce the centroidsHaveChanged Flag for all proceses
-        bool lchc = centroidsHaveChanged;
-        MPI_Allreduce(&lchc, &centroidsHaveChanged, 1, MPI_C_BOOL, MPI_LOR, MPI_COMM_WORLD);
         if(rank == 0)
             cout << "Changed Centroids..\n ";
 
@@ -272,14 +284,16 @@ double kMeansClustering(int k, int n_rows, char newDatasetFile[], char newCentro
         recalcClusters(c, k, data, n_rows, mode);
         //MPI_Barrier(MPI_COMM_WORLD);
 
-        //Fill the sendData
-        for(int i=startRow; i<endRow; i++){
-            sendData[i-startRow] = data[i];
-        }
+        if(mode == MPI_MODE){
+            //Fill the sendData
+            for(int i=startRow; i<endRow; i++){
+                sendData[i-startRow] = data[i];
+            }
 
-        //Gatter data from all proc
-        MPI_Allgather(sendData, numRows, mpi_point_type, data, numRows, mpi_point_type, MPI_COMM_WORLD);
-        //cout << "Process " << rank << " has gathered inside doWhile!\n";
+            //Gatter data from all proc
+            MPI_Allgather(sendData, numRows, mpi_point_type, data, numRows, mpi_point_type, MPI_COMM_WORLD);
+            //cout << "Process " << rank << " has gathered inside doWhile!\n";
+        }
 
         #ifdef LOOP_PRINT_AND_PLOT
             if(rank == 0){
