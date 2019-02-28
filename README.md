@@ -1,5 +1,12 @@
 **K-Means Clustering algorithm in OpenMP/MPI**
 
+First install the required libraries:
+
+```
+sudo apt install openmpi-bin
+sudo apt install libopenmpi-dev
+```
+
 Run the K-Means Clustering algorithm in three Modes:
 
 - Normal Mode;
