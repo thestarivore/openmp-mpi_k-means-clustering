@@ -44,6 +44,7 @@ bool        recalcClusters(Point * c, int k, Point * data, int ds_rows, ExecMode
 void        printDataToFile(char *filename, Point * data, int ds_rows, bool newFile);
 void        printCentroidsToFile(char *filename, Point * data, int k, bool newFile);
 void        printObjFunctionToFile(char *filename, float objFunResult, bool newFile);
+void        printExecTimeToFile(char *filename, float execTime, bool newFile);
 bool        recalcCentroids(Point * c, int k, Point * data, int ds_rows, ExecMode mode);
 void        plotClustersFromFile();
 float       calcSquaredError(Point * c, int k, Point * data, int ds_rows);
@@ -59,6 +60,7 @@ int main(int argc, char *argv[]) {
     char newDatasetFile[]       = "../dataset_display/newdataset.csv";
     char newCentroidsFile[]     = "../dataset_display/newcentroids.csv";
     char objFunFile[]           = "../dataset_display/objfun.csv";
+    char execTimesFile[]        = "../dataset_display/exectimes.csv";
     int k, n_rows, rc;
     KMCResult normalExecResult, openMPExecResult, mpiExecResult;
     Point *data, *c, *c2, *c3;
@@ -157,6 +159,11 @@ int main(int argc, char *argv[]) {
         printObjFunctionToFile(objFunFile, normalExecResult.objFunResult, true);
         printObjFunctionToFile(objFunFile, openMPExecResult.objFunResult, false);
         printObjFunctionToFile(objFunFile, mpiExecResult.objFunResult, false);
+
+        //Print to file the Execution Time values
+        printExecTimeToFile(execTimesFile, normalExecResult.execTime, true);
+        printExecTimeToFile(execTimesFile, openMPExecResult.execTime, false);
+        printExecTimeToFile(execTimesFile, mpiExecResult.execTime, false);
     }
 
     cout << "Process " << rank << " has finished!\n";
@@ -676,8 +683,47 @@ void printObjFunctionToFile(char *filename, float objFunResult, bool newFile){
         exit(1);
     }
 
+    if(newFile){
+        /* print the header */
+        const char *text = "ObjFun";
+        fprintf(f, "%s\n", text);
+    }
+
     /* print */
     fprintf(f, "%f\n", objFunResult);
+
+    fclose(f);
+}
+
+/**
+ * @brief   Print the new Execution Time result to file
+ * @param   filename        file to read
+ * @param   execTime        result of the execution time
+ * @param   newFile         If true erases the file before writing, otherwize the new data
+ *                          gets appended at the end of the file
+ * @retval  None
+ */
+void printExecTimeToFile(char *filename, float execTime, bool newFile){
+    FILE *f;
+
+    if(newFile)
+        f = fopen(filename, "w");     //w erase, a append at the end
+    else
+        f = fopen(filename, "a");     //w erase, a append at the end
+    if (f == NULL)
+    {
+        cout << "Error opening file!\n";
+        exit(1);
+    }
+
+    if(newFile){
+        /* print the header */
+        const char *text = "Time";
+        fprintf(f, "%s\n", text);
+    }
+
+    /* print */
+    fprintf(f, "%f\n", execTime);
 
     fclose(f);
 }
