@@ -32,7 +32,7 @@ typedef struct{
 //Defines
 //#define PRELOOP_PRINT_AND_PLOT              //Decomment to enable PrintToFile & ClustersPlot before entering the algorithm's loop
 //#define LOOP_PRINT_AND_PLOT                 //Decomment to enable PrintToFile & ClustersPlot inside the algorithm's loop
-#define POSTLOOP_PRINT_AND_PLOT             //Decomment to enable PrintToFile & ClustersPlot after the algorithm's loop
+//#define POSTLOOP_PRINT_AND_PLOT             //Decomment to enable PrintToFile & ClustersPlot after the algorithm's loop
 #define PARALLEL_COMPUTAION                 //Decomment to enable parallel computaion(via OpenMP) of the clusters and centroids recalculation
 
 //Function Prototypes
@@ -45,6 +45,7 @@ void        printDataToFile(char *filename, Point * data, int ds_rows, bool newF
 void        printCentroidsToFile(char *filename, Point * data, int k, bool newFile);
 void        printObjFunctionToFile(char *filename, float objFunResult, bool newFile);
 void        printExecTimeToFile(char *filename, float execTime, bool newFile);
+void        printResultsToFile(char *filename, int k, ExecMode mode, float execTime, float objFunResult, bool newFile);
 bool        recalcCentroids(Point * c, int k, Point * data, int ds_rows, ExecMode mode);
 void        plotClustersFromFile();
 float       calcSquaredError(Point * c, int k, Point * data, int ds_rows);
@@ -61,9 +62,16 @@ int main(int argc, char *argv[]) {
     char newCentroidsFile[]     = "../dataset_display/newcentroids.csv";
     char objFunFile[]           = "../dataset_display/objfun.csv";
     char execTimesFile[]        = "../dataset_display/exectimes.csv";
-    int k, n_rows, rc;
+    char resultsFile[]          = "../dataset_display/results.csv";
+    int k=-1, n_rows, rc;
     KMCResult normalExecResult, openMPExecResult, mpiExecResult;
     Point *data, *c, *c2, *c3;
+
+    //Get the number of centroids as program argument
+    if(argv[1] != NULL){
+        k = atoi(argv[1]);
+        cout << "Number of centroids (K): " << k << endl;
+    }
 
     //Initialize the MPI execution environment
     MPI_Init(0,0);
@@ -84,9 +92,11 @@ int main(int argc, char *argv[]) {
         //Read the dataset
         readDataset(datasetFile, data);
 
-        //Pick K
-        cout << "Number of centroids (K): ";
-        cin >> k;
+        //Pick K if not already passed at runtime
+        if(k == -1){
+            cout << "Number of centroids (K): ";
+            cin >> k;
+        }
 
         //Allocate and choose the centroids
         c = (Point*) malloc(k * sizeof(Point));
@@ -156,6 +166,7 @@ int main(int argc, char *argv[]) {
         cout << "K-Means Clustering MPI execution time: "       << mpiExecResult.execTime      * 1000 << "ms\n";
 
         //Print to file the ObjFunction values
+        float objFunValue = normalExecResult.objFunResult;
         printObjFunctionToFile(objFunFile, normalExecResult.objFunResult, true);
         printObjFunctionToFile(objFunFile, openMPExecResult.objFunResult, false);
         printObjFunctionToFile(objFunFile, mpiExecResult.objFunResult, false);
@@ -164,6 +175,11 @@ int main(int argc, char *argv[]) {
         printExecTimeToFile(execTimesFile, normalExecResult.execTime, true);
         printExecTimeToFile(execTimesFile, openMPExecResult.execTime, false);
         printExecTimeToFile(execTimesFile, mpiExecResult.execTime, false);
+
+        //Print the total Results (Cumulative with the past results --> for data analisis)
+        printResultsToFile(resultsFile, k, NORMAL_MODE,     normalExecResult.execTime, objFunValue, false);
+        printResultsToFile(resultsFile, k, OPEN_MP_MODE,    openMPExecResult.execTime, objFunValue, false);
+        printResultsToFile(resultsFile, k, MPI_MODE,        mpiExecResult.execTime, objFunValue, false);
     }
 
     cout << "Process " << rank << " has finished!\n";
@@ -724,6 +740,42 @@ void printExecTimeToFile(char *filename, float execTime, bool newFile){
 
     /* print */
     fprintf(f, "%f\n", execTime);
+
+    fclose(f);
+}
+
+/**
+ * @brief   Print the Result to file (inclusing number of clusters, ExecutionMode, ExecutionTime and ObjFunction value)
+ * @param   filename        file to read
+ * @param   k               number of centroids
+ * @param   mode            Execution Mode
+ * @param   execTime        result of the execution time
+ * @param   objFunResult    result of the obj function
+ * @param   newFile         If true erases the file before writing, otherwize the new data
+ *                          gets appended at the end of the file
+ * @retval  None
+ */
+void printResultsToFile(char *filename, int k, ExecMode mode, float execTime, float objFunResult, bool newFile){
+    FILE *f;
+
+    if(newFile)
+        f = fopen(filename, "w");     //w erase, a append at the end
+    else
+        f = fopen(filename, "a");     //w erase, a append at the end
+    if (f == NULL)
+    {
+        cout << "Error opening file!\n";
+        exit(1);
+    }
+
+    if(newFile){
+        /* print the header */
+        const char *text = "K, Mode, Time, ObjFun";
+        fprintf(f, "%s\n", text);
+    }
+
+    /* print */
+    fprintf(f, "%d,%d,%f,%f\n", k, mode, execTime, objFunResult);
 
     fclose(f);
 }
