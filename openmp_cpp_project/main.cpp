@@ -35,7 +35,7 @@ typedef struct{
 //Defines
 //#define PRELOOP_PRINT_AND_PLOT              //Decomment to enable PrintToFile & ClustersPlot before entering the algorithm's loop
 //#define LOOP_PRINT_AND_PLOT                 //Decomment to enable PrintToFile & ClustersPlot inside the algorithm's loop
-//#define POSTLOOP_PRINT_AND_PLOT             //Decomment to enable PrintToFile & ClustersPlot after the algorithm's loop
+#define POSTLOOP_PRINT_AND_PLOT             //Decomment to enable PrintToFile & ClustersPlot after the algorithm's loop
 #define PARALLEL_COMPUTAION                 //Decomment to enable parallel computaion(via OpenMP) of the clusters and centroids recalculation
 
 //Function Prototypes
@@ -939,6 +939,7 @@ bool recalcCentroids(Point * c, int k, Point * data, int ds_rows, ExecMode mode)
                 //Iterate all the data points
                 //#pragma omp parallel shared(newCentroidX, newCentroidY, meanCount)
                 //#pragma omp for schedule(static)
+                #pragma omp parallel for default(shared) reduction(+:newCentroidX,newCentroidY,meanCount)
                 for(int i=0; i<ds_rows; i++){
                     //The datapoints that belong to this cluster
                     if(data[i].cn == j){
