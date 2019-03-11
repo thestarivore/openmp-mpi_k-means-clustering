@@ -565,7 +565,7 @@ bool recalcClusters(Point * c, int k, Point * data, int ds_rows, ExecMode mode){
             }
         }
     }else if(mode == MPI_MODE){
-        if (numtasks == 4) {
+        if (numtasks >= 2) {
             int rowsPerProc = ds_rows / numtasks;
 
             //Claculate Start and End row for each task
@@ -601,7 +601,7 @@ bool recalcClusters(Point * c, int k, Point * data, int ds_rows, ExecMode mode){
             printf("Error, you must specify 4 tasks\n");
         }
     }else if(mode == MPI_OPENMP_MODE){
-        if (numtasks == 4) {
+        if (numtasks >= 2) {
             int rowsPerProc = ds_rows / numtasks;
 
             //Claculate Start and End row for each task
@@ -878,7 +878,7 @@ bool recalcCentroids(Point * c, int k, Point * data, int ds_rows, ExecMode mode)
                 centroidsChanged = true;
         }
     }else if(mode == MPI_MODE){
-        if (numtasks == 4) {
+        if (numtasks >= 2) {
             int clustersPerProc = k / numtasks;
 
             //Calculate Start and End clusters for each task
@@ -919,7 +919,7 @@ bool recalcCentroids(Point * c, int k, Point * data, int ds_rows, ExecMode mode)
             printf("Error, you must specify 4 tasks\n");
         }
     }else if(mode == MPI_OPENMP_MODE){
-        if (numtasks == 4) {
+        if (numtasks >= 2) {
             int clustersPerProc = k / numtasks;
 
             //Calculate Start and End clusters for each task

@@ -10,7 +10,7 @@ from sklearn.datasets.samples_generator import make_blobs
 sns.set()  # for plot styling
 
 #Samples
-N_SAMPLES = 1000000
+N_SAMPLES = 100000
 
 # Get path of the current dir, then use it to create paths:
 CURRENT_DIR = os.path.dirname(__file__)
