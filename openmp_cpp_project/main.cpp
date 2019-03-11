@@ -35,7 +35,7 @@ typedef struct{
 //Defines
 //#define PRELOOP_PRINT_AND_PLOT              //Decomment to enable PrintToFile & ClustersPlot before entering the algorithm's loop
 //#define LOOP_PRINT_AND_PLOT                 //Decomment to enable PrintToFile & ClustersPlot inside the algorithm's loop
-#define POSTLOOP_PRINT_AND_PLOT             //Decomment to enable PrintToFile & ClustersPlot after the algorithm's loop
+//#define POSTLOOP_PRINT_AND_PLOT             //Decomment to enable PrintToFile & ClustersPlot after the algorithm's loop
 #define PARALLEL_COMPUTAION                 //Decomment to enable parallel computaion(via OpenMP) of the clusters and centroids recalculation
 
 //Function Prototypes
@@ -58,7 +58,7 @@ int numtasks, rank;
 MPI_Datatype mpi_point_type;
 
 int main(int argc, char *argv[]) {
-    char datasetFile[]          = "../dataset_display/dataset.csv";
+    char datasetFile[]          = "../dataset_display/dataset_100K.csv";
     char initialDatasetFile[]   = "../dataset_display/initialdataset.csv";
     char initialCentroidsFile[] = "../dataset_display/initialcentroids.csv";
     char newDatasetFile[]       = "../dataset_display/newdataset.csv";
@@ -193,7 +193,7 @@ int main(int argc, char *argv[]) {
         printExecTimeToFile(execTimesFile, mpiOpenMPExecResult.execTime, false);
 
         //Print the total Results (Cumulative with the past results --> for data analisis)
-        printResultsToFile(resultsFile, k, NORMAL_MODE,     normalExecResult.execTime, objFunValue, false);
+        printResultsToFile(resultsFile, k, NORMAL_MODE,     normalExecResult.execTime, objFunValue, true);
         printResultsToFile(resultsFile, k, OPEN_MP_MODE,    openMPExecResult.execTime, objFunValue, false);
         printResultsToFile(resultsFile, k, MPI_MODE,        mpiExecResult.execTime, objFunValue, false);
         printResultsToFile(resultsFile, k, MPI_OPENMP_MODE, mpiOpenMPExecResult.execTime, objFunValue, false);
