@@ -825,7 +825,7 @@ void printResultsToFile(char *filename, int k, ExecMode mode, float execTime, fl
 
     if(newFile){
         /* print the header */
-        const char *text = "K, Mode, Time, ObjFun";
+        const char *text = "K,Mode,Time,ObjFun";
         fprintf(f, "%s\n", text);
     }
 
