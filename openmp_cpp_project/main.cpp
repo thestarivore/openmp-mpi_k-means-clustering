@@ -58,7 +58,7 @@ int numtasks, rank;
 MPI_Datatype mpi_point_type;
 
 int main(int argc, char *argv[]) {
-    char datasetFile[]          = "../dataset_display/dataset_100K.csv";
+    char datasetFile[]          = "../dataset_display/dataset_10K.csv";
     char initialDatasetFile[]   = "../dataset_display/initialdataset.csv";
     char initialCentroidsFile[] = "../dataset_display/initialcentroids.csv";
     char newDatasetFile[]       = "../dataset_display/newdataset.csv";
@@ -316,8 +316,8 @@ KMCResult kMeansClustering(int k, int n_rows, char newDatasetFile[], char newCen
             MPI_Allreduce(&lchc, &centroidsHaveChanged, 1, MPI_C_BOOL, MPI_LOR, MPI_COMM_WORLD);
         }
 
-        if(rank == 0)
-            cout << "Changed Centroids..\n ";
+        //if(rank == 0)
+        ///    cout << "Changed Centroids..\n ";
 
         //Recalculate Clusters
         recalcClusters(c, k, data, n_rows, mode);
