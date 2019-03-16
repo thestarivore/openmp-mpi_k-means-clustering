@@ -193,7 +193,7 @@ int main(int argc, char *argv[]) {
         printExecTimeToFile(execTimesFile, mpiOpenMPExecResult.execTime, false);
 
         //Print the total Results (Cumulative with the past results --> for data analisis)
-        printResultsToFile(resultsFile, k, NORMAL_MODE,     normalExecResult.execTime, objFunValue, true);
+        printResultsToFile(resultsFile, k, NORMAL_MODE,     normalExecResult.execTime, objFunValue, false);
         printResultsToFile(resultsFile, k, OPEN_MP_MODE,    openMPExecResult.execTime, objFunValue, false);
         printResultsToFile(resultsFile, k, MPI_MODE,        mpiExecResult.execTime, objFunValue, false);
         printResultsToFile(resultsFile, k, MPI_OPENMP_MODE, mpiOpenMPExecResult.execTime, objFunValue, false);
