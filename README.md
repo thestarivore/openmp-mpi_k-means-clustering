@@ -142,4 +142,16 @@ Plots need to be disabled by commenting the defines described above, otherwise t
 
 ### RESULTS: Jupyter Notebook
 
-A Jupyter Notebook documentation is available for data analysis in the Jupyter file **openmp_mpi_k-means.ipynb**(open with Jupyter Notebook) and  .md file **openmp_mpi_k-means.md**(open with Typora or similar .md readers).
+A Jupyter Notebook documentation is available for data analysis in the Jupyter file **openmp_mpi_k-means.ipynb**(open with Jupyter Notebook) , an  .md file **openmp_mpi_k-means.md**(open with Typora or similar .md readers) and **openmp_mpi_k-means.pdf**.
+
+To download the pdf from the .ipynb you might need to install the following:
+
+```
+pip install nbconvert
+apt-get install texlive-generic-recommended
+sudo apt-get install pandoc
+
+//And use the following command for the convertion
+jupyter nbconvert --to pdf MyNotebook.ipynb
+```
+
