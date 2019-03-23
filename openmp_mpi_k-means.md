@@ -500,6 +500,7 @@ plotRealtionCentroidsExecTime()
 
 ```python
 EXECUTIONS, n_t, openmp_t, mpi_t, mpi_mp_t, n_c, openmp_c, mpi_c, mpi_mp_c, n_of = getResultsData(results_1M_path)
+n_t_1M, openmp_t_1M, mpi_t_1M, mpi_mp_t_1M = n_t, openmp_t, mpi_t, mpi_mp_t
 plotRealtionCentroidsExecTime()
 ```
 
@@ -637,3 +638,151 @@ On the above plot we can observe that the Scalability of the four Modes on the g
 However, the outstanding performance of the OpenMP mode we think that is not going to continue to scale linearly by increasing the size of the dataset and the number of clusters. That is beacause there is a limit on how many cores and computational power a machine can have. At some point the computational power will saturate and the execution time of the OpenMP mode will rise exponentially. 
 
 **The only Modes that will continue Scale Linearly are the MPI and MPI+OpenMP nodes**. That is because you can always add more nodes to your cluster to increase performance. However that is a supposition since we couldn't actually run tests on much larger datasets and larger clusters of nodes on Amazon AWS because of the large costs and computational time needed for such feat. (for example to run the script on a 10M points dataset would have required approximately a week with the four on demand c3.xlarge nodes)
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+## OpenMP-MPI vs Flink Comparizon
+
+With the sections bellow we'll be comparing the results from the Flink and OpenMP-MPI projects in terms of processing time and scalability.
+
+### 1) Relation between the number of centroids and ExecutionTime
+
+Let's now again average the executions results on a 1M points Dataset and plot the relation between the number of centroids and the Execution times. The execution were made with a number of centroids between 1 and 10.
+
+We'll compare the results for each mode of both projects: 
+- **Normal C**, **OpenMP**, **MPI**, **MPI + OpenMP** for the OpenMP/MPI Project;
+- **1P**, **4P** for the Flink Project;
+
+
+```python
+num_centroids = 10
+
+#obj_mean_vals = list()
+obj_mean_vals_4p = list() # -p 4
+obj_mean_vals_1p = list() # -p 1
+mink = 1
+maxk = num_centroids+1
+
+for i in range(mink, maxk):
+    fixed_path_objfun = os.path.join(CURRENT_DIR, '../flink-kmeans_clustering/script_results/comparison-1p/results_time_' + str(i) + '.csv')
+    
+    objval_iter = list()
+    with open(fixed_path_objfun) as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            iter = int(row['iter'])
+            objval = float(row['time'])
+            objval_iter.append(objval)
+            
+    obj_mean_vals_1p.append([i, numpy.average(objval_iter)])
+    
+for i in range(mink, maxk):
+    fixed_path_objfun = os.path.join(CURRENT_DIR, '../flink-kmeans_clustering/script_results/comparison-4p/results_time_' + str(i) + '.csv')
+    
+    objval_iter = list()
+    with open(fixed_path_objfun) as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            iter = int(row['iter'])
+            objval = float(row['time'])
+            objval_iter.append(objval)
+            
+    obj_mean_vals_4p.append([i, numpy.average(objval_iter)])
+
+x_val = [x[0] for x in obj_mean_vals_1p]
+y_val_1p = [x[1] for x in obj_mean_vals_1p]
+y_val_4p = [x[1] for x in obj_mean_vals_4p]
+
+plt.figure(figsize=(fig_width, fig_height), dpi= 80, facecolor='w', edgecolor='k')
+plt.plot(x_val,y_val_n_et, '-b', label='Normal C')
+plt.plot(x_val,y_val_mp_et, '-g', label='OpenMP')
+plt.plot(x_val,y_val_mpi_et, '-r', label='MPI')
+plt.plot(x_val,y_val_mpi_mp_et, '-y', label='MPI + OpenMP')
+plt.plot(x_val,y_val_1p, '-k', label='Flink_1P')
+plt.plot(x_val,y_val_4p, '-c', label='Flink_4P')
+plt.suptitle('Number of centroids - Execution time')
+plt.xlabel('# of centroids')
+plt.ylabel('Execution time [ms]')
+plt.legend(loc='upper left')
+plt.show()
+```
+
+
+![png](output_49_0.png)
+
+
+### Resulting plot analisys - Processing Time
+On the above plot we can observe that for Flink, the execution time does not change too much increasing the number of centroids. The overhead introduced by Flink is much bigger with respect to the increment of time needed to compute the position of more centroids and so we can not observe an increment of time when adding more centroids. 
+
+Things are different for the OpenMP/MP Project, where for all four modes we see an increase of execution time by increasing the number of centroids (altough not clearly visible for OpenMP Mode because of the scale). 
+
+That is because MPI is a protocol of a lower level compared to Flink, therefore is more efficient and has a smaller overhead. This too is the reason why the OpenMP/MPI Project's Modes have a smaller Execution Time compared to he Flink Project's Modes.
+
+### 2) Relation between Dataset's number of points and ExecutionTime
+
+
+```python
+num_of_points = [100,1000,10000,100000,1000000]
+obj_mean_vals_4p = list() # -p 4
+obj_mean_vals_1p = list() # -p 1
+
+mink = 1
+maxk = len(num_of_points)+1
+
+for i in range(mink, maxk):
+    fixed_path_objfun = os.path.join(CURRENT_DIR, '../flink-kmeans_clustering/script_results/script_4-1/results_time_' + str(i) + '.csv')
+    
+    objval_iter = list()
+    with open(fixed_path_objfun) as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            iter = int(row['iter'])
+            objval = float(row['time'])
+            objval_iter.append(objval)
+            
+    obj_mean_vals_4p.append([i, numpy.average(objval_iter)])
+    
+for i in range(mink, maxk):
+    fixed_path_objfun = os.path.join(CURRENT_DIR, '../flink-kmeans_clustering/script_results/script_4-2/results_time_' + str(i) + '.csv')
+    
+    objval_iter = list()
+    with open(fixed_path_objfun) as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            iter = int(row['iter'])
+            objval = float(row['time'])
+            objval_iter.append(objval)
+            
+    obj_mean_vals_1p.append([i, numpy.average(objval_iter)])
+
+y_val_4p = [x[1] for x in obj_mean_vals_4p]
+y_val_1p = [x[1] for x in obj_mean_vals_1p]
+
+plt.figure(figsize=(fig_width, fig_height), dpi= 80, facecolor='w', edgecolor='k')
+line_n, = plt.plot(x_valds,y_val_n, '-b', label='Normal C')
+line_mp, = plt.plot(x_valds,y_val_mp, '-g', label='OpenMP')
+line_mpi, = plt.plot(x_valds,y_val_mpi, '-r', label='MPI')
+line_mpi_mp, = plt.plot(x_valds,y_val_mpi_mp, '-y', label='MPI + OpenMP')
+line_4p, = plt.plot(x_valds,y_val_4p, '-c', label='Flink 4P')
+line_2p, = plt.plot(x_valds,y_val_1p, '-k', label='Flink')
+plt.legend(handles=[line_4p, line_2p, line_n, line_mp, line_mpi, line_mpi_mp])
+plt.suptitle('Number of points - Execution time')
+plt.xlabel('# of points')
+plt.ylabel('Execution time [ms]')
+plt.show()
+```
+
+
+![png](output_52_0.png)
+
+
+### Resulting plot analisys - Scalability
+On the above plot we can observe that the Scalability of both OpenMP/MPI's Project Modes and Flink's Project Modes are linear with respect to the linear increase of the dataset size. Moreover ***we can valuate the scalability of the performances of each Mode by the slope of it's curve on the plot***.
+
+As we can see the Mode that performs best of all is the OpenMP Mode, but it cannot scale indefinitely as there is a limit on how many cores and computational power a node can have. And therefore we expect that at some point the computational power will saturate.
+
+The only Modes that will continue Scale Linearly are the MPI and MPI+OpenMP nodes in the OpenMP/MPI Project and the Flink  with parallelization in the Flink Project(altough Flink here is not executed on physically different nodes), because you can always add more nodes to your cluster to increase performance. Between these, ***the mode that scale better of all is the OpenMP+MPI Mode***, the reason being that it uses a low level management of a cluster of nodes(with MPI) and also exploits the paralelism within each node(with OpenMP).
+
