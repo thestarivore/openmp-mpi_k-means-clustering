@@ -15,3 +15,14 @@
 	"mpi.h"
 	"stddef.h"
 
+1553253148 source:/media/nik/Data/Scuola/Middleware technology for distributed systems/Projects/openmp_k-meansclustering/openmp_cpp_project/main.cpp
+	<iostream>
+	<stdlib.h>
+	<stdio.h>
+	<list>
+	<math.h>
+	<time.h>
+	<omp.h>
+	"mpi.h"
+	"stddef.h"
+
