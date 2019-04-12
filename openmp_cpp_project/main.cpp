@@ -36,7 +36,7 @@ typedef struct{
 //#define PRELOOP_PRINT_AND_PLOT              //Decomment to enable PrintToFile & ClustersPlot before entering the algorithm's loop
 //#define LOOP_PRINT_AND_PLOT                 //Decomment to enable PrintToFile & ClustersPlot inside the algorithm's loop
 //#define POSTLOOP_PRINT_AND_PLOT             //Decomment to enable PrintToFile & ClustersPlot after the algorithm's loop
-#define PARALLEL_COMPUTAION                 //Decomment to enable parallel computaion(via OpenMP) of the clusters and centroids recalculation
+#define PARALLEL_COMPUTAION                 //Decomment to enable parallel computation(via OpenMP) of the clusters and centroids recalculation
 
 //Function Prototypes
 int         countLines(char *filename);
@@ -126,11 +126,11 @@ int main(int argc, char *argv[]) {
 
     MPI_Barrier(MPI_COMM_WORLD);
 
-    //Boardcast the number of rows: n_rows
+    //Broadcast the number of rows: n_rows
     rc = MPI_Bcast(&n_rows, 1, MPI_INT, 0, MPI_COMM_WORLD);
     printf("Task %d: received  n_rows = %d\n", rank, n_rows);
 
-    //Boardcast the number of clusters: K
+    //Broadcast the number of clusters: K
     rc = MPI_Bcast(&k, 1, MPI_INT, 0, MPI_COMM_WORLD);
     printf("Task %d: received  k = %d\n", rank, k);
 
@@ -147,12 +147,12 @@ int main(int argc, char *argv[]) {
     MPI_Type_create_struct(nitems, blocklengths, offsets, types, &mpi_point_type);
     MPI_Type_commit(&mpi_point_type);
 
-    //Boardcast the data
+    //Broadcast the data
     if(rank != 0)   //Allocate data for the other processes
         data = (Point*) malloc(n_rows * sizeof(Point));
     rc = MPI_Bcast(data, n_rows, mpi_point_type, 0, MPI_COMM_WORLD);
 
-    //Boardcast the clusters
+    //Broadcast the clusters
     if(rank != 0){   //Allocate the clusters for the other processes
         c3 = (Point*) malloc(k * sizeof(Point));
         c4 = (Point*) malloc(k * sizeof(Point));
@@ -222,7 +222,7 @@ KMCResult kMeansClustering(int k, int n_rows, char newDatasetFile[], char newCen
     int rc;
     float J;
 
-    //Start time mesurment
+    //Start time measurement
     if(rank == 0)
         start = omp_get_wtime();
 
@@ -234,7 +234,7 @@ KMCResult kMeansClustering(int k, int n_rows, char newDatasetFile[], char newCen
         //Recalculate Clusters
         recalcClusters(c, k, data, n_rows, mode);
 
-        //Caculate Start and End row for each task
+        //Calculate Start and End row for each task
         rowsPerProc = n_rows / numtasks;
         startRow = rank * rowsPerProc;
         endRow   = startRow + rowsPerProc;
@@ -248,7 +248,7 @@ KMCResult kMeansClustering(int k, int n_rows, char newDatasetFile[], char newCen
             sendData[i-startRow] = data[i];
         }
 
-        //Gatter data from all proc
+        //Gather data from all proc
         MPI_Gather(sendData, numRows, mpi_point_type, data, numRows, mpi_point_type, 0, MPI_COMM_WORLD);
         //cout << "Process " << rank << " has gathered outside doWhile!\n";
     }
@@ -272,8 +272,8 @@ KMCResult kMeansClustering(int k, int n_rows, char newDatasetFile[], char newCen
     int displs[numtasks];
 
     //Step only needed on MPI MODE
-    if(mode == MPI_MODE || mode == MPI_OPENMP_MODE){
-        //Caculate Start and End clusters for each task
+    if(mode == MPI_MODE || mode == MPI_OPENMP_MODE){    
+        //Calculate Start and End clusters for each task
         clustersPerProc = k / numtasks;
         startCluster = rank * clustersPerProc;
         endCluster   = startCluster + clustersPerProc;
@@ -308,7 +308,7 @@ KMCResult kMeansClustering(int k, int n_rows, char newDatasetFile[], char newCen
                 sendClusters[i-startCluster] = c[i];
             }
 
-            //Gatter clusters from all proc
+            //Gather clusters from all proc
             MPI_Allgatherv(sendClusters, numClusters, mpi_point_type, c, recvcounts, displs, mpi_point_type, MPI_COMM_WORLD);
 
             //Reduce the centroidsHaveChanged Flag for all proceses
@@ -329,7 +329,7 @@ KMCResult kMeansClustering(int k, int n_rows, char newDatasetFile[], char newCen
                 sendData[i-startRow] = data[i];
             }
 
-            //Gatter data from all proc
+            //Gather data from all proc
             MPI_Allgather(sendData, numRows, mpi_point_type, data, numRows, mpi_point_type, MPI_COMM_WORLD);
             //cout << "Process " << rank << " has gathered inside doWhile!\n";
         }
@@ -347,13 +347,13 @@ KMCResult kMeansClustering(int k, int n_rows, char newDatasetFile[], char newCen
     }while(centroidsHaveChanged);
 
     if(rank == 0){
-        //End time mesurment - for an accurate time mesurment is strongly recommended to comment
+        //End time measurement - for an accurate time measurement is strongly recommended to comment
         //                     the PRELOOP_PRINT_AND_PLOT & LOOP_PRINT_AND_PLOT defines
         end = omp_get_wtime();
         cpu_time_used = ((double) (end - start));// / CLOCKS_PER_SEC ;
         cout << "K-Means Clustering execution time: " << cpu_time_used << "sec\n";
 
-        //Objective function(J) calculus (Squared Error function) - Calculate an indicator(score) that can be used
+        //Objective function(J) calculus (Squared Error function) - Calculate an indicator (score) that can be used
         //to choose K(number of centroids). Usually the Knee-rule is used to choose K in the J-K graph.
         J = calcSquaredError(c, k, data, n_rows);
         cout << "K-Means Clustering squared error: " << J << "\n";
@@ -495,7 +495,7 @@ void initCentroids(Point * c, int k, Point * data, int ds_rows){
             r.y = rand() % (int)(pmin.y-pmax.y) + pmin.y;   //random number betwen miny and maxy
             tooClose = false;
 
-            //Iterate backwords the centroids and valuate if the new centroid is too close to another one
+            //Iterate backwards the centroids and valuate if the new centroid is too close to another one
             for(j=i; j>0; j--){
                 dist = distance2Points(r, c[j]);
                 if(dist < distThreshold){
@@ -604,7 +604,7 @@ bool recalcClusters(Point * c, int k, Point * data, int ds_rows, ExecMode mode){
         if (numtasks >= 2) {
             int rowsPerProc = ds_rows / numtasks;
 
-            //Claculate Start and End row for each task
+            //Calculate Start and End row for each task
             int startRow = rank * rowsPerProc;
             int endRow   = startRow + rowsPerProc;
             if(rank == (numtasks-1))
@@ -949,7 +949,7 @@ bool recalcCentroids(Point * c, int k, Point * data, int ds_rows, ExecMode mode)
                     }
                 }
 
-                //Set new centroid (if no node belogngs to the centroid, then leave it unchanged)
+                //Set new centroid (if no node belongs to the centroid, then leave it unchanged)
                 if(meanCount != 0){ //ZERO Division protection
                     c[j].x = newCentroidX / meanCount;
                     c[j].y = newCentroidY / meanCount;
