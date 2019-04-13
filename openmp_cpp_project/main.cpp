@@ -36,7 +36,6 @@ typedef struct{
 //#define PRELOOP_PRINT_AND_PLOT              //Decomment to enable PrintToFile & ClustersPlot before entering the algorithm's loop
 //#define LOOP_PRINT_AND_PLOT                 //Decomment to enable PrintToFile & ClustersPlot inside the algorithm's loop
 //#define POSTLOOP_PRINT_AND_PLOT             //Decomment to enable PrintToFile & ClustersPlot after the algorithm's loop
-#define PARALLEL_COMPUTAION                 //Decomment to enable parallel computation(via OpenMP) of the clusters and centroids recalculation
 
 //Function Prototypes
 int         countLines(char *filename);
@@ -223,17 +222,18 @@ KMCResult kMeansClustering(int k, int n_rows, char newDatasetFile[], char newCen
     float J;
 
     //Start time measurement
+    printf("Start time measurement\n");
     if(rank == 0)
         start = omp_get_wtime();
+
+    //-------------------------------------------------------------------------------
+    //Recalculate Clusters
+    recalcClusters(c, k, data, n_rows, mode);
 
     //Step only needed on MPI MODE
     int rowsPerProc, startRow, endRow, numRows;
     Point * sendData;
     if(mode == MPI_MODE || mode == MPI_OPENMP_MODE){
-        //-------------------------------------------------------------------------------
-        //Recalculate Clusters
-        recalcClusters(c, k, data, n_rows, mode);
-
         //Calculate Start and End row for each task
         rowsPerProc = n_rows / numtasks;
         startRow = rank * rowsPerProc;
@@ -272,7 +272,7 @@ KMCResult kMeansClustering(int k, int n_rows, char newDatasetFile[], char newCen
     int displs[numtasks];
 
     //Step only needed on MPI MODE
-    if(mode == MPI_MODE || mode == MPI_OPENMP_MODE){    
+    if(mode == MPI_MODE || mode == MPI_OPENMP_MODE){
         //Calculate Start and End clusters for each task
         clustersPerProc = k / numtasks;
         startCluster = rank * clustersPerProc;
