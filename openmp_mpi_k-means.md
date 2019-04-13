@@ -123,10 +123,10 @@ print("Total centroids: %d" % centroids)
 ```
 
     Cluster,X,Y
-    0 -5.933069 -4.976418
-    1 -5.933069 3.023582
-    2 -3.933069 0.023582
-    3 -4.933069 -3.976418
+    0 3.066931 9.023582
+    1 -4.933069 3.023582
+    2 -1.933069 -5.976418
+    3 -6.933069 -10.976418
     Total centroids: 4
 
 
@@ -245,10 +245,10 @@ print('MPI + OpenMP Execution    --> ' + str(t[3]*1000) + 'ms')
 
     Execution Times:
     
-    Normal Execution --> 89.87299999999999ms
-    OpenMP Execution --> 43.096000000000004ms
-    MPI Execution    --> 887.715ms
-    MPI + OpenMP Execution    --> 2597.859ms
+    Normal Execution --> 103.364ms
+    OpenMP Execution --> 107.58800000000001ms
+    MPI Execution    --> 50.316ms
+    MPI + OpenMP Execution    --> 219.138ms
 
 
 While the value of the Objective Function is:
@@ -264,7 +264,7 @@ with open(objfun_path) as csvfile:
 print('ObjectiveFunction value --> ' + str(objfun[0]))
 ```
 
-    ObjectiveFunction value --> 71883.648438
+    ObjectiveFunction value --> 71883.570312
 
 
 ------------------------------------------
@@ -276,7 +276,7 @@ All the executions and tests explained below were run on a cluster of **four c3.
 
 ### Cumulative Execution Results
 
-By running a bach script we were able to cumulate a large quantity of execution results (more than 4000 executions). For consistency we've run all four different versions of the K-Means Clustering Algorithm sequentially one at a time on the same initial dataset and the same random pair of initial centroids (changing every cycle). That way the results of each execution can be compared with the executions of the other three versions of the algorithm. For each executions we've stored the number of centroids, the execution mode (algorithm version), the execution time and the obj function result.
+By running a bach script we were able to cumulate a large quantity of execution results (more than 5000 executions). For consistency we've run all four different versions of the K-Means Clustering Algorithm sequentially one at a time on the same initial dataset and the same random pair of initial centroids (changing every cycle). That way the results of each execution can be compared with the executions of the other three versions of the algorithm. For each executions we've stored the number of centroids, the execution mode (algorithm version), the execution time and the obj function result.
 
 ### 1) Relation between number of centroids and obj function value
 Let's average the executions results in the large dataset described above and plot the relation between the number of centroids and the obj function value. The execution were made with a number of centroids between 1 and 10.
@@ -367,7 +367,7 @@ plt.ylabel('ObjFun Value')
 plt.show()
 ```
 
-    Rows in the results file: 801
+    Rows in the results file: 1209
 
 
 
@@ -443,7 +443,7 @@ EXECUTIONS, n_t, openmp_t, mpi_t, mpi_mp_t, n_c, openmp_c, mpi_c, mpi_mp_c, n_of
 plotRealtionCentroidsExecTime()
 ```
 
-    Rows in the results file: 1201
+    Rows in the results file: 1209
 
 
 
@@ -458,7 +458,7 @@ EXECUTIONS, n_t, openmp_t, mpi_t, mpi_mp_t, n_c, openmp_c, mpi_c, mpi_mp_c, n_of
 plotRealtionCentroidsExecTime()
 ```
 
-    Rows in the results file: 1201
+    Rows in the results file: 1209
 
 
 
@@ -473,7 +473,7 @@ EXECUTIONS, n_t, openmp_t, mpi_t, mpi_mp_t, n_c, openmp_c, mpi_c, mpi_mp_c, n_of
 plotRealtionCentroidsExecTime()
 ```
 
-    Rows in the results file: 801
+    Rows in the results file: 1209
 
 
 
@@ -488,7 +488,7 @@ EXECUTIONS, n_t, openmp_t, mpi_t, mpi_mp_t, n_c, openmp_c, mpi_c, mpi_mp_c, n_of
 plotRealtionCentroidsExecTime()
 ```
 
-    Rows in the results file: 801
+    Rows in the results file: 1209
 
 
 
@@ -504,7 +504,7 @@ n_t_1M, openmp_t_1M, mpi_t_1M, mpi_mp_t_1M = n_t, openmp_t, mpi_t, mpi_mp_t
 plotRealtionCentroidsExecTime()
 ```
 
-    Rows in the results file: 401
+    Rows in the results file: 609
 
 
 
@@ -514,9 +514,9 @@ plotRealtionCentroidsExecTime()
 ### Resulting plots analysis - ExecutionTime
 On the above plots we can observe the Execution Times (Y-Axis) for each execution mode base on the number of centroids (X-Axis). The executions were repeated a great number of times for each of the five different datasets dimensions, so that we can test the scalability of the system. 
 
-It's immediately clear just by a glance that **OpenMP Mode (Green Line)** greatly outperforms the single-core and single-process **Normal Mode (Blue line)** once there is a resonable big dataset (> 1000 points). But it also outperforms the **MPI (Red Line) and MPI+OpenMP (Yellow Line) Modes**, the latter performing quite pourly on a small dataset. This is probably due to all the message exchange between the processes in MPI that are neccessary for managing the paralellization of the operations and due to the broadcasting/gathering of the data to/from the nodes. By adding OpenMP to MPI we can see indeed a big improvement (on a resonably big dataset) but due to the overhead caused by the messages exchanged between the nodes it's not enough to beat the OpenMP Mode on these tests.
+It's immediately clear just by a glance that **OpenMP Mode (Green Line), MPI (Red Line) and MPI+OpenMP (Yellow Line) Modes** outperform the single-core and single-process **Normal Mode (Blue line)** once there is a reasonable big dataset (> 10000 points). On less than 1000 points however none of them performs better than the Normal Mode (as can be seen in the Figure 2.1 - 100points Dataset). This is probably due to all the message exchange between the processes that are necessary for managing the paralellization of the operations and due to the broadcasting/gathering of the data to/from the nodes.
 
-However we notice that **by increasing the size of the dataset and number of clusters, all three Modes (OpenMP, MPI, MPI+OpenMP) perform better that the single node and single core version (Normal Mode)**. 
+By adding OpenMP to MPI we can see indeed a big improvement, the **MPI+OpenMP (Yellow Line) Mode** not only greatly outperforms the sequential mode but also the OpenMP and MPI Modes. This way, we take advantage not only of the multiple nodes but also of the cores on each node used.
 
 Finally we remind the reader that the above plot is made by averaging the behavior of a large number of executions each with a different initial random centroids placement. And it has been noticed that if the initial placement of the centroids is a good one, then the MPI and MPI+OpenMP Modes perform better, so **by engaging in a more sophisticated algorithms for centroids placement we could improve overall performance**.
 
@@ -621,11 +621,11 @@ plt.show()
  
 ```
 
-    Rows in the results file: 1201
-    Rows in the results file: 1201
-    Rows in the results file: 801
-    Rows in the results file: 801
-    Rows in the results file: 401
+    Rows in the results file: 1209
+    Rows in the results file: 1209
+    Rows in the results file: 1209
+    Rows in the results file: 1209
+    Rows in the results file: 609
 
 
 
@@ -633,11 +633,13 @@ plt.show()
 
 
 ### Resulting plots analysis - Scalability
-On the above plot we can observe that the scalability of the four modes on the given datasets and cluster of nodes seems to be linear. Moreover, by increasing the size of the datasets the performance gap between the single core and single node mode and the other modes is more pronounced. Note on the figure that with a small dataset the Normal Mode might perform better. While later on the best performing mode is OpenMP Mode followed by the MPI+OpenMP Mode.
+On the above plot we can observe that the scalability of the four modes on the given datasets and cluster of nodes seems to be linear. Moreover, by increasing the size of the datasets the performance gap between the single core and single node mode and the other modes is more pronounced. Note on the figure that with a small dataset the Normal Mode might perform similarly (actually performs better with less than 1000 points). While later on **the best performing mode is OpenMP+MPI Mode followed by the OpenMP Mode and MPI Mode.**
 
-However, the outstanding performance of the OpenMP mode we think that is not going to continue to scale linearly by increasing the size of the dataset and the number of clusters. That is because there is a limit on how many cores and computational power a machine can have. At some point the computational power will saturate and the execution time of the OpenMP mode will rise exponentially. 
+OpenMP+MPI Mode outshines both OpenMP Mode and MPI Mode, while there isn't such a big gap between the latter two. OpenMP performs slightly better than MPI Mode, probably because the message exchange between the local cores impacts less than the message exchange between the nodes.  
 
-**The only modes that will continue scale linearly are the MPI and MPI+OpenMP nodes**. That is because you can always add more nodes to your cluster to increase performance. However that is a supposition since we couldn't actually run tests on much larger datasets and larger clusters of nodes on Amazon AWS because of the large costs and computational time needed for such feat. (for example to run the script on a 10M points dataset would have required approximately a week with the four on demand c3.xlarge nodes)
+However, the performance of the OpenMP mode we think that is not going to continue to scale linearly indefinitely by increasing the size of the dataset and the number of clusters. That is because there is a limit on how many cores and computational power a machine can have. At some point the computational power will saturate and the execution time of the OpenMP mode will rise exponentially. 
+
+**The only modes that will continue scale linearly are the MPI and MPI+OpenMP nodes**. That is because you can always add more nodes to your cluster to increase performance. However, that is a supposition since we couldn't actually run tests on much larger datasets and larger clusters of nodes on Amazon AWS because of the large costs and computational time needed for such feat. (for example to run the script on a 10M points dataset would have required approximately a week with the four on demand c3.xlarge nodes)
 
 --------------------------------------------------------------------------
 --------------------------------------------------------------------------
@@ -717,9 +719,9 @@ plt.show()
 ### Resulting plot analysis - Processing Time
 On the above plot we can observe that for Flink, the execution time does not change too much increasing the number of centroids. The overhead introduced by Flink is much bigger with respect to the increment of time needed to compute the position of more centroids and so we can not observe an increment of time when adding more centroids. 
 
-Things are different for the OpenMP/MP Project, where for all four modes we see an increase of execution time by increasing the number of centroids (although not clearly visible for OpenMP Mode because of the scale). 
+Things are different for the OpenMP/MP Project, where for all four modes we see an increase of execution time by increasing the number of centroids.
 
-That is because MPI is a protocol of a lower level compared to Flink, therefore is more efficient and has a smaller overhead. This too is the reason why the OpenMP/MPI project's modes have a smaller execution time compared to he Flink project's modes.
+That is because MPI and OpenMP are protocols of a lower level compared to Flink, therefore are more efficient and have a smaller overhead. This too is the reason why the OpenMP/MPI project's modes have a smaller execution time compared to he Flink project's modes.
 
 ### 2) Relation between Dataset's number of points and ExecutionTime
 
@@ -780,8 +782,8 @@ plt.show()
 
 
 ### Resulting plot analysis - Scalability
-On the above plot we can observe that the scalability of both OpenMP/MPI's project modes and Flink's project modes are linear with respect to the linear increase of the dataset size. Moreover ***we can valuate the scalability of the performances of each mode by the slope of it's curve on the plot***.
+On the above plot we can observe that the scalability of both OpenMP/MPI's project modes and Flink's project modes are linear with respect to the linear increase of the dataset size. Moreover, ***we can valuate the scalability of the performances of each mode by the slope of it's curve on the plot***.
 
-As we can see the mode that performs best of all is the OpenMP Mode, but it cannot scale indefinitely as there is a limit on how many cores and computational power a node can have. And therefore we expect that at some point the computational power will saturate.
+As we can see the mode that performs best of all is the OpenMP+MPI Mode followed by OpenMP and MPI Modes. But among these, OpenMP Mode cannot scale indefinitely as there is a limit on how many cores and computational power a node can have.
 
-The only modes that will continue scale linearly are the MPI and MPI+OpenMP nodes in the OpenMP/MPI Project and the Flink  with parallelization in the Flink project (although Flink here is not executed on physically different nodes), because you can always add more nodes to your cluster to increase performance. Between these, ***the mode that scale better of all is the OpenMP+MPI Mode***, the reason being that it uses a low level management of a cluster of nodes (with MPI) and also exploits the paralelism within each node (with OpenMP).
+The only modes that will continue scale linearly are the MPI and MPI+OpenMP nodes in the OpenMP/MPI Project and the Flink  with parallelization in the Flink project (although Flink here is not executed on physically different nodes), because you can always add more nodes to your cluster to increase performance. Between these, ***the mode that scale better of all is the OpenMP+MPI Mode***, the reason being that it uses a low level management of a cluster of nodes (with MPI) and also exploits the parallelism within each node (with OpenMP).

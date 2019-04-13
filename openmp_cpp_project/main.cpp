@@ -35,7 +35,7 @@ typedef struct{
 //Defines
 //#define PRELOOP_PRINT_AND_PLOT              //Decomment to enable PrintToFile & ClustersPlot before entering the algorithm's loop
 //#define LOOP_PRINT_AND_PLOT                 //Decomment to enable PrintToFile & ClustersPlot inside the algorithm's loop
-//#define POSTLOOP_PRINT_AND_PLOT             //Decomment to enable PrintToFile & ClustersPlot after the algorithm's loop
+#define POSTLOOP_PRINT_AND_PLOT             //Decomment to enable PrintToFile & ClustersPlot after the algorithm's loop
 
 //Function Prototypes
 int         countLines(char *filename);
@@ -57,7 +57,7 @@ int numtasks, rank;
 MPI_Datatype mpi_point_type;
 
 int main(int argc, char *argv[]) {
-    char datasetFile[]          = "../dataset_display/dataset_1M.csv";
+    char datasetFile[]          = "../dataset_display/dataset_100K.csv";
     char initialDatasetFile[]   = "../dataset_display/initialdataset.csv";
     char initialCentroidsFile[] = "../dataset_display/initialcentroids.csv";
     char newDatasetFile[]       = "../dataset_display/newdataset.csv";
