@@ -226,7 +226,7 @@ plt.show()
 The program written in C actually executes four different versions of the K-Means Clustering Algorithm. They run sequentially one at a time, but they use the same initial dataset and the same random pair of initial centroids. The initial position of the centroids is of vital importance to the result of the execution so is important that all four versions use the same set of centroids so that we can have a meaningful comparison in performance.
 All four versions will produce the same result and same objective function value, but they will have different execution times. 
 
-We've set the maximum number of cores for the OpenMP version (4 on this PC), and 4 parallel nodes for the MPI (and MPI+OpenMP) version. As expected the OpenMP version perform much better that the sequential version, while with MPI is not always the case, here are the results of a single execution on this dataset:
+We've set the maximum number of cores for the OpenMP version (4 on this PC), and 4 parallel nodes for the MPI (and MPI+OpenMP) version. Here are the results of a single execution run locally on this dataset:
 
 
 ```python
