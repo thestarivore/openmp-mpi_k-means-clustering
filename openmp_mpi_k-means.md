@@ -367,7 +367,7 @@ plt.ylabel('ObjFun Value')
 plt.show()
 ```
 
-    Rows in the results file: 1209
+    Rows in the results file: 1201
 
 
 
@@ -443,7 +443,7 @@ EXECUTIONS, n_t, openmp_t, mpi_t, mpi_mp_t, n_c, openmp_c, mpi_c, mpi_mp_c, n_of
 plotRealtionCentroidsExecTime()
 ```
 
-    Rows in the results file: 1209
+    Rows in the results file: 1201
 
 
 
@@ -458,7 +458,7 @@ EXECUTIONS, n_t, openmp_t, mpi_t, mpi_mp_t, n_c, openmp_c, mpi_c, mpi_mp_c, n_of
 plotRealtionCentroidsExecTime()
 ```
 
-    Rows in the results file: 1209
+    Rows in the results file: 1201
 
 
 
@@ -473,7 +473,7 @@ EXECUTIONS, n_t, openmp_t, mpi_t, mpi_mp_t, n_c, openmp_c, mpi_c, mpi_mp_c, n_of
 plotRealtionCentroidsExecTime()
 ```
 
-    Rows in the results file: 1209
+    Rows in the results file: 1201
 
 
 
@@ -488,7 +488,7 @@ EXECUTIONS, n_t, openmp_t, mpi_t, mpi_mp_t, n_c, openmp_c, mpi_c, mpi_mp_c, n_of
 plotRealtionCentroidsExecTime()
 ```
 
-    Rows in the results file: 1209
+    Rows in the results file: 1201
 
 
 
@@ -504,7 +504,7 @@ n_t_1M, openmp_t_1M, mpi_t_1M, mpi_mp_t_1M = n_t, openmp_t, mpi_t, mpi_mp_t
 plotRealtionCentroidsExecTime()
 ```
 
-    Rows in the results file: 609
+    Rows in the results file: 601
 
 
 
@@ -621,11 +621,11 @@ plt.show()
  
 ```
 
-    Rows in the results file: 1209
-    Rows in the results file: 1209
-    Rows in the results file: 1209
-    Rows in the results file: 1209
-    Rows in the results file: 609
+    Rows in the results file: 1201
+    Rows in the results file: 1201
+    Rows in the results file: 1201
+    Rows in the results file: 1201
+    Rows in the results file: 601
 
 
 
