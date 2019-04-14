@@ -33,9 +33,16 @@ typedef struct{
 }KMCResult;
 
 //Defines
+//Plotting Modes Enable
 //#define PRELOOP_PRINT_AND_PLOT              //Decomment to enable PrintToFile & ClustersPlot before entering the algorithm's loop
 //#define LOOP_PRINT_AND_PLOT                 //Decomment to enable PrintToFile & ClustersPlot inside the algorithm's loop
 #define POSTLOOP_PRINT_AND_PLOT             //Decomment to enable PrintToFile & ClustersPlot after the algorithm's loop
+
+//Execution Modes Enable (run sequentially if more than one at a time is enabled)
+#define ENABLE_NORMAL_MODE                  //Decomment to enable Normal Execution Mode
+#define ENABLE_OPENMP_MODE                  //Decomment to enable OpenMP Execution Mode
+#define ENABLE_MPI_MODE                     //Decomment to enable MPI Execution Mode
+#define ENABLE_MPI_OPENMP_MODE              //Decomment to enable MPI+OpenMP Execution Mode
 
 //Function Prototypes
 int         countLines(char *filename);
@@ -161,41 +168,68 @@ int main(int argc, char *argv[]) {
 
     //Execute the K-Means Clustering with three different approaces and record the execution time
     if(rank == 0){
-        normalExecResult = kMeansClustering(k, n_rows, newDatasetFile, newCentroidsFile, data, c, NORMAL_MODE);
-        openMPExecResult = kMeansClustering(k, n_rows, newDatasetFile, newCentroidsFile, data, c2, OPEN_MP_MODE);
+        #ifdef ENABLE_NORMAL_MODE
+            normalExecResult = kMeansClustering(k, n_rows, newDatasetFile, newCentroidsFile, data, c, NORMAL_MODE);
+        #endif // ENABLE_NORMAL_MODE
+
+        #ifdef ENABLE_OPENMP_MODE
+            openMPExecResult = kMeansClustering(k, n_rows, newDatasetFile, newCentroidsFile, data, c2, OPEN_MP_MODE);
+        #endif // ENABLE_OPENMP_MODE
     }
     MPI_Barrier(MPI_COMM_WORLD);
-    mpiExecResult = kMeansClustering(k, n_rows, newDatasetFile, newCentroidsFile, data, c3, MPI_MODE);
-    MPI_Barrier(MPI_COMM_WORLD);
-    mpiOpenMPExecResult = kMeansClustering(k, n_rows, newDatasetFile, newCentroidsFile, data, c4, MPI_OPENMP_MODE);
+    #ifdef ENABLE_MPI_MODE
+        mpiExecResult = kMeansClustering(k, n_rows, newDatasetFile, newCentroidsFile, data, c3, MPI_MODE);
+    #endif // ENABLE_MPI_MODE
 
+    MPI_Barrier(MPI_COMM_WORLD);
+    #ifdef ENABLE_MPI_OPENMP_MODE
+        mpiOpenMPExecResult = kMeansClustering(k, n_rows, newDatasetFile, newCentroidsFile, data, c4, MPI_OPENMP_MODE);
+    #endif // ENABLE_MPI_OPENMP_MODE
 
     //Show Execution time for each aproach
     MPI_Barrier(MPI_COMM_WORLD);
     if(rank == 0){
-        cout << "K-Means Clustering Normal execution time: "    << normalExecResult.execTime   * 1000 << "ms\n";
-        cout << "K-Means Clustering OpenMP execution time: "    << openMPExecResult.execTime   * 1000 << "ms\n";
-        cout << "K-Means Clustering MPI execution time: "       << mpiExecResult.execTime      * 1000 << "ms\n";
-        cout << "K-Means Clustering MPI+OpenMP execution time: "<< mpiOpenMPExecResult.execTime* 1000 << "ms\n";
-
-        //Print to file the ObjFunction values
         float objFunValue = normalExecResult.objFunResult;
-        printObjFunctionToFile(objFunFile, normalExecResult.objFunResult, true);
-        printObjFunctionToFile(objFunFile, openMPExecResult.objFunResult, false);
-        printObjFunctionToFile(objFunFile, mpiExecResult.objFunResult, false);
-        printObjFunctionToFile(objFunFile, mpiOpenMPExecResult.objFunResult, false);
 
-        //Print to file the Execution Time values
-        printExecTimeToFile(execTimesFile, normalExecResult.execTime, true);
-        printExecTimeToFile(execTimesFile, openMPExecResult.execTime, false);
-        printExecTimeToFile(execTimesFile, mpiExecResult.execTime, false);
-        printExecTimeToFile(execTimesFile, mpiOpenMPExecResult.execTime, false);
+        #ifdef ENABLE_NORMAL_MODE
+            cout << "K-Means Clustering Normal execution time: "    << normalExecResult.execTime   * 1000 << "ms\n";
+            //Print to file the ObjFunction values
+            printObjFunctionToFile(objFunFile, normalExecResult.objFunResult, true);
+            //Print to file the Execution Time values
+            printExecTimeToFile(execTimesFile, normalExecResult.execTime, true);
+            //Print the total Results (Cumulative with the past results --> for data analisis)
+            printResultsToFile(resultsFile, k, NORMAL_MODE,     normalExecResult.execTime, objFunValue, false);
+        #endif // ENABLE_NORMAL_MODE
 
-        //Print the total Results (Cumulative with the past results --> for data analisis)
-        printResultsToFile(resultsFile, k, NORMAL_MODE,     normalExecResult.execTime, objFunValue, false);
-        printResultsToFile(resultsFile, k, OPEN_MP_MODE,    openMPExecResult.execTime, objFunValue, false);
-        printResultsToFile(resultsFile, k, MPI_MODE,        mpiExecResult.execTime, objFunValue, false);
-        printResultsToFile(resultsFile, k, MPI_OPENMP_MODE, mpiOpenMPExecResult.execTime, objFunValue, false);
+        #ifdef ENABLE_OPENMP_MODE
+            cout << "K-Means Clustering OpenMP execution time: "    << openMPExecResult.execTime   * 1000 << "ms\n";
+            //Print to file the ObjFunction values
+            printObjFunctionToFile(objFunFile, openMPExecResult.objFunResult, false);
+            //Print to file the Execution Time values
+            printExecTimeToFile(execTimesFile, openMPExecResult.execTime, false);
+            //Print the total Results (Cumulative with the past results --> for data analisis)
+            printResultsToFile(resultsFile, k, OPEN_MP_MODE,    openMPExecResult.execTime, objFunValue, false);
+        #endif // ENABLE_OPENMP_MODE
+
+        #ifdef ENABLE_MPI_MODE
+            cout << "K-Means Clustering MPI execution time: "       << mpiExecResult.execTime      * 1000 << "ms\n";
+            //Print to file the ObjFunction values
+            printObjFunctionToFile(objFunFile, mpiExecResult.objFunResult, false);
+            //Print to file the Execution Time values
+            printExecTimeToFile(execTimesFile, mpiExecResult.execTime, false);
+            //Print the total Results (Cumulative with the past results --> for data analisis)
+            printResultsToFile(resultsFile, k, MPI_MODE,        mpiExecResult.execTime, objFunValue, false);
+        #endif // ENABLE_MPI_MODE
+
+        #ifdef ENABLE_MPI_OPENMP_MODE
+            cout << "K-Means Clustering MPI+OpenMP execution time: "<< mpiOpenMPExecResult.execTime* 1000 << "ms\n";
+            //Print to file the ObjFunction values
+            printObjFunctionToFile(objFunFile, mpiOpenMPExecResult.objFunResult, false);
+            //Print to file the Execution Time values
+            printExecTimeToFile(execTimesFile, mpiOpenMPExecResult.execTime, false);
+            //Print the total Results (Cumulative with the past results --> for data analisis)
+            printResultsToFile(resultsFile, k, MPI_OPENMP_MODE, mpiOpenMPExecResult.execTime, objFunValue, false);
+        #endif // ENABLE_MPI_OPENMP_MODE
     }
 
     cout << "Process " << rank << " has finished!\n";
